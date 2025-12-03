@@ -102,14 +102,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 fade-in"
         onClick={onClose}
       />
 
       {/* Settings Modal */}
       <div
         data-settings-modal
-        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] max-w-[90vw] max-h-[85vh] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-2xl z-50 overflow-hidden flex flex-col"
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] max-w-[90vw] max-h-[85vh] bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-2xl z-50 overflow-hidden flex flex-col scale-in"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-[var(--border-primary)] flex items-center justify-between shrink-0">

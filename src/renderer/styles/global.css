@@ -98,6 +98,207 @@
   text-decoration: line-through;
 }
 
+.ProseMirror u {
+  text-decoration: underline;
+}
+
+.ProseMirror mark {
+  background-color: #fef08a;
+  color: inherit;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.ProseMirror sub {
+  font-size: 0.75em;
+  vertical-align: sub;
+}
+
+.ProseMirror sup {
+  font-size: 0.75em;
+  vertical-align: super;
+}
+
+/* Table Styles */
+.ProseMirror .editor-table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+  table-layout: fixed;
+  width: 100%;
+  overflow: hidden;
+}
+
+.ProseMirror .editor-table td,
+.ProseMirror .editor-table th {
+  min-width: 1em;
+  border: 1px solid var(--border-primary);
+  padding: 6px 8px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ProseMirror .editor-table th {
+  font-weight: 600;
+  text-align: left;
+  background-color: var(--bg-secondary);
+}
+
+.ProseMirror .editor-table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(0, 123, 255, 0.1);
+  pointer-events: none;
+}
+
+.ProseMirror .editor-table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: var(--accent-primary);
+  pointer-events: none;
+}
+
+/* Link Styles */
+.ProseMirror .editor-link {
+  color: var(--accent-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ProseMirror .editor-link:hover {
+  color: var(--accent-hover);
+}
+
+/* Image Styles */
+.ProseMirror .editor-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  margin: 1rem 0;
+}
+
+.ProseMirror .editor-image.ProseMirror-selectednode {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Task List Styles */
+.ProseMirror .editor-task-list {
+  list-style: none;
+  padding: 0;
+}
+
+.ProseMirror .editor-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+}
+
+.ProseMirror .editor-task-item input[type="checkbox"] {
+  margin-top: 0.25rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ProseMirror .editor-task-item > label {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+}
+
+.ProseMirror .editor-task-item > div {
+  flex: 1;
+}
+
+/* Focus Styles */
+.ProseMirror.editor-focused {
+  outline: none;
+}
+
+/* Placeholder Styles */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--text-tertiary);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Line Numbers Styles */
+.line-numbers-gutter {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.line-numbers-content {
+  line-height: 1.5rem;
+}
+
+.line-number {
+  transition: all 0.15s ease-in-out;
+  cursor: default;
+  white-space: nowrap;
+  height: 1.5rem;
+  min-height: 1.5rem;
+  line-height: 1.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.line-number:hover {
+  color: var(--text-secondary);
+}
+
+/* Ensure editor content has matching line height - CRITICAL for alignment */
+.ProseMirror {
+  line-height: 1.5rem !important;
+}
+
+.ProseMirror p {
+  line-height: 1.5rem !important;
+  margin: 0 !important;
+  min-height: 1.5rem !important;
+  padding: 0;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  line-height: 1.5rem !important;
+  margin: 0 !important;
+  min-height: 1.5rem !important;
+  padding: 0;
+}
+
+.ProseMirror li {
+  line-height: 1.5rem !important;
+  margin: 0 !important;
+  min-height: 1.5rem !important;
+}
+
+.ProseMirror pre {
+  line-height: 1.5rem !important;
+  margin: 0 !important;
+}
+
+.ProseMirror blockquote {
+  line-height: 1.5rem !important;
+  margin: 0 !important;
+  min-height: 1.5rem !important;
+}
+
 /* Code block syntax highlighting */
 .ProseMirror pre code .hljs {
   display: block;
@@ -329,6 +530,28 @@ a:hover {
   }
 }
 
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .fade-in {
   animation: fadeIn var(--transition-base);
 }
@@ -339,6 +562,27 @@ a:hover {
 
 .slide-up {
   animation: slideUp var(--transition-base);
+}
+
+.slide-in-right {
+  animation: slideInRight var(--transition-base);
+}
+
+.scale-in {
+  animation: scaleIn var(--transition-base);
+}
+
+/* Smooth transitions utility classes */
+.transition-smooth {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-fast {
+  transition: all 100ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-slow {
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Electron-specific drag region utilities */

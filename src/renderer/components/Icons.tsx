@@ -61,23 +61,95 @@ export function FolderIcon({ className = "" }: IconProps) {
  * File Icon - Changes color based on file extension
  */
 export function FileIcon({ className = "", extension }: FileIconProps) {
-  // Determine color based on file extension
+  // Determine color based on file extension (expanded color palette)
   const getColor = () => {
     switch (extension?.toLowerCase()) {
+      // Markdown
       case "md":
       case "markdown":
         return "text-blue-400";
+      // Text
       case "txt":
         return "text-gray-400";
+      // JSON
       case "json":
         return "text-yellow-400";
+      // PDF
       case "pdf":
-        return "text-red-400";
+        return "text-red-500";
+      // TypeScript/JavaScript
       case "ts":
       case "tsx":
+        return "text-blue-500";
       case "js":
       case "jsx":
+        return "text-yellow-500";
+      // HTML/CSS
+      case "html":
+        return "text-orange-500";
+      case "css":
+      case "scss":
+      case "sass":
+        return "text-blue-400";
+      // Python
+      case "py":
+        return "text-yellow-400";
+      // Rust
+      case "rs":
+        return "text-orange-600";
+      // Go
+      case "go":
+        return "text-cyan-400";
+      // Java
+      case "java":
+        return "text-red-500";
+      // C/C++
+      case "c":
+      case "cpp":
+      case "cc":
+      case "cxx":
+        return "text-blue-600";
+      // Shell
+      case "sh":
+      case "bash":
+      case "zsh":
+        return "text-green-500";
+      // YAML
+      case "yml":
+      case "yaml":
+        return "text-purple-400";
+      // XML
+      case "xml":
+        return "text-orange-400";
+      // SQL
+      case "sql":
         return "text-blue-300";
+      // PHP
+      case "php":
+        return "text-indigo-500";
+      // Ruby
+      case "rb":
+        return "text-red-400";
+      // Swift
+      case "swift":
+        return "text-orange-500";
+      // Kotlin
+      case "kt":
+        return "text-purple-500";
+      // Vue
+      case "vue":
+        return "text-green-400";
+      // Svelte
+      case "svelte":
+        return "text-orange-500";
+      // Docker
+      case "dockerfile":
+        return "text-blue-500";
+      // Config files
+      case "gitignore":
+      case "env":
+      case "config":
+        return "text-gray-500";
       default:
         return "text-[var(--text-tertiary)]";
     }

@@ -82,7 +82,7 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
   return (
     <div
       ref={menuRef}
-      className="fixed z-[var(--z-dropdown)] bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md shadow-lg py-1 min-w-[180px]"
+      className="fixed z-[var(--z-dropdown)] bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md shadow-lg py-1 min-w-[180px] scale-in"
       style={{ left: `${x}px`, top: `${y}px` }}
       role="menu"
     >
@@ -101,7 +101,7 @@ export function ContextMenu({ items, x, y, onClose }: ContextMenuProps) {
             key={item.id}
             className={`
               w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left
-              transition-colors duration-100
+              transition-all duration-200 ease-in-out rounded-sm mx-1
               ${
                 item.disabled
                   ? "text-[var(--text-tertiary)] cursor-not-allowed"

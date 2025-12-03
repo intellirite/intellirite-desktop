@@ -61,10 +61,12 @@ export function TabStrip({
         className="flex items-center h-full min-w-full"
         style={{ scrollbarWidth: "thin" }}
       >
-        {tabs.map((tab) => (
+        {tabs.map((tab, index) => (
           <div
             key={tab.id}
             ref={tab.id === activeTabId ? activeTabRef : null}
+            className="slide-in-right"
+            style={{ animationDelay: `${index * 20}ms` }}
           >
             <Tab
               tab={tab}

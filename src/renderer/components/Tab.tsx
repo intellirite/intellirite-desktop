@@ -98,8 +98,8 @@ export function Tab({
         className={`
           group flex items-center gap-2 px-3 py-1.5 min-w-0 max-w-[200px] cursor-pointer
           border-r border-[var(--border-primary)]
-          transition-colors duration-100
-          ${isActive ? "bg-[var(--bg-primary)]" : "bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)]"}
+          transition-all duration-200 ease-in-out relative
+          ${isActive ? "bg-[var(--bg-primary)] shadow-sm border-b-2 border-b-[var(--accent-primary)]" : "bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)]"}
         `}
         onClick={onSelect}
         onDoubleClick={handleDoubleClick}

@@ -133,8 +133,9 @@ export function Sidebar({
         <div
           className={`
             group flex items-center gap-1 px-2 py-1 cursor-pointer select-none
-            hover:bg-[var(--bg-hover)] transition-colors duration-100 relative
-            ${isSelected ? "bg-[var(--bg-active)]" : ""}
+            hover:bg-[var(--bg-hover)] transition-all duration-200 ease-in-out relative
+            ${isSelected ? "bg-[var(--bg-active)] shadow-sm" : ""}
+            rounded-sm
           `}
           style={{ paddingLeft: `${8 + depth * 16}px` }}
           onClick={() => {
@@ -177,7 +178,7 @@ export function Sidebar({
           {item.type === "folder" && (
             <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
               <button
-                className="w-5 h-5 flex items-center justify-center hover:bg-[var(--bg-active)] rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                className="w-5 h-5 flex items-center justify-center hover:bg-[var(--bg-active)] rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all duration-200 ease-in-out"
                 onClick={(e) => {
                   e.stopPropagation();
                   onNewFile?.(item.path);
@@ -188,7 +189,7 @@ export function Sidebar({
                 <PlusIcon className="w-3 h-3" />
               </button>
               <button
-                className="w-5 h-5 flex items-center justify-center hover:bg-[var(--bg-active)] rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
+                className="w-5 h-5 flex items-center justify-center hover:bg-[var(--bg-active)] rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all duration-200 ease-in-out"
                 onClick={(e) => {
                   e.stopPropagation();
                   onNewFolder?.(item.path);
@@ -204,7 +205,7 @@ export function Sidebar({
 
         {/* Render Children if Folder is Expanded */}
         {item.type === "folder" && isExpanded && hasChildren && (
-          <div>
+          <div className="animate-in fade-in slide-down duration-200">
             {item.children!.map((child) => renderFileItem(child, depth + 1))}
           </div>
         )}
@@ -254,7 +255,7 @@ export function Sidebar({
                     e.stopPropagation();
                     setShowNewFileDialog(true);
                   }}
-                  className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-all duration-200 ease-in-out shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   aria-label="New file"
                   title="New file"
                 >
@@ -265,7 +266,7 @@ export function Sidebar({
                     e.stopPropagation();
                     onNewFolder?.(currentFolder);
                   }}
-                  className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-all duration-200 ease-in-out shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                   aria-label="New folder"
                   title="New folder"
                 >
