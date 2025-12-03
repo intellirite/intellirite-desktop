@@ -12,21 +12,21 @@ This document breaks down the Intellirite desktop app development into manageabl
 - [ ] Test basic window creation
 
 ### 1.2 Project Structure
-- [ ] Create folder structure:
+- [x] Create folder structure:
   - `src/main/` - Electron main process
   - `src/renderer/` - React UI
   - `src/shared/` - Shared types/utilities
   - `src/renderer/components/` - UI components
   - `src/renderer/styles/` - CSS/styling
-- [ ] Set up TypeScript configs for main and renderer
-- [ ] Configure path aliases
+- [x] Set up TypeScript configs for main and renderer
+- [x] Configure path aliases
 
 ### 1.3 Basic Window & Theme Setup
-- [ ] Create main window with proper dimensions
-- [ ] Implement frameless window (custom title bar)
-- [ ] Set up dark theme as default
-- [ ] Configure color palette (grays, accent colors)
-- [ ] Set up Inter/JetBrains Mono fonts
+- [x] Create main window with proper dimensions
+- [x] Implement frameless window (custom title bar)
+- [x] Set up dark theme as default
+- [x] Configure color palette (grays, accent colors)
+- [x] Set up Inter/JetBrains Mono fonts
 
 ---
 
