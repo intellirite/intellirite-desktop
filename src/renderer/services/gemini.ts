@@ -18,8 +18,17 @@ export type GeminiModel = typeof GEMINI_MODELS[number]["id"];
 // Initialize Gemini AI
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
+export interface AvailableModel {
+  id: string;
+  name: string;
+  displayName?: string;
+  description: string;
+  category: 'flash' | 'pro' | 'experimental' | 'embedding' | 'other';
+  costTier: number; // 1 = cheapest, 2 = medium, 3 = expensive, 4 = most expensive
+}
+
 /**
- * List available models from the API
+ * List available models from the API with metadata
  */
 export async function listAvailableModels(): Promise<string[]> {
   try {
@@ -40,7 +49,6 @@ export async function listAvailableModels(): Promise<string[]> {
     }
     
     const data = await response.json();
-    console.log('Full API response:', data);
     
     if (data.models && Array.isArray(data.models)) {
       const modelNames = data.models
@@ -51,16 +59,132 @@ export async function listAvailableModels(): Promise<string[]> {
         })
         .filter((name: string) => name && (name.includes('gemini') || name.includes('models/')));
       
-      console.log('Available Gemini models:', modelNames);
-      console.log('Full model details:', data.models.map((m: any) => ({ name: m.name, displayName: m.displayName, supportedMethods: m.supportedGenerationMethods })));
-      
       return modelNames;
     }
     
-    console.warn('No models found in API response:', data);
     return [];
   } catch (error) {
     console.error('Error listing models:', error);
+    return [];
+  }
+}
+
+/**
+ * Get available models with formatted metadata for UI
+ * Filters duplicates and sorts by cost (cheapest first)
+ */
+export async function getAvailableModelsForUI(): Promise<AvailableModel[]> {
+  try {
+    const modelIds = await listAvailableModels();
+    
+    const modelMap = new Map<string, AvailableModel>();
+    
+    modelIds
+      .filter(id => !id.includes('embedding') && !id.includes('image-generation') && !id.includes('tts') && !id.includes('robotics') && !id.includes('computer-use'))
+      .forEach(id => {
+        // Categorize and format model names
+        let category: AvailableModel['category'] = 'other';
+        let displayName = id;
+        let description = '';
+        let costTier = 3; // Default to medium cost
+        let shouldInclude = false;
+        
+        // Prioritize newer versions and filter out duplicates
+        if (id.includes('2.5-flash') && !id.includes('lite') && !id.includes('preview') && !id.includes('image')) {
+          category = 'flash';
+          displayName = 'Gemini 2.5 Flash';
+          description = 'Fast and efficient (recommended)';
+          costTier = 1; // Cheapest
+          shouldInclude = true;
+        } else if (id.includes('2.5-pro') && !id.includes('preview') && !id.includes('tts')) {
+          category = 'pro';
+          displayName = 'Gemini 2.5 Pro';
+          description = 'Most capable model for complex tasks';
+          costTier = 4; // Most expensive
+          shouldInclude = true;
+        } else if (id.includes('2.0-flash') && !id.includes('exp') && !id.includes('lite') && !id.includes('preview')) {
+          category = 'flash';
+          displayName = 'Gemini 2.0 Flash';
+          description = 'Fast model';
+          costTier = 1; // Cheapest
+          shouldInclude = true;
+        } else if (id.includes('2.0-pro') && !id.includes('exp') && !id.includes('preview')) {
+          category = 'pro';
+          displayName = 'Gemini 2.0 Pro';
+          description = 'Advanced capabilities';
+          costTier = 3; // Expensive
+          shouldInclude = true;
+        } else if (id.includes('flash-latest') && !id.includes('lite')) {
+          category = 'flash';
+          displayName = 'Gemini Flash (Latest)';
+          description = 'Latest flash model';
+          costTier = 1; // Cheapest
+          shouldInclude = true;
+        } else if (id.includes('pro-latest')) {
+          category = 'pro';
+          displayName = 'Gemini Pro (Latest)';
+          description = 'Latest pro model';
+          costTier = 3; // Expensive
+          shouldInclude = true;
+        } else if (id.includes('2.0-flash-exp') && !id.includes('image')) {
+          category = 'experimental';
+          displayName = 'Gemini 2.0 Flash (Experimental)';
+          description = 'Experimental features';
+          costTier = 2; // Medium
+          shouldInclude = true;
+        } else if (id.includes('2.0-pro-exp')) {
+          category = 'experimental';
+          displayName = 'Gemini 2.0 Pro (Experimental)';
+          description = 'Experimental pro model';
+          costTier = 3; // Expensive
+          shouldInclude = true;
+        } else if (id.includes('3-pro') && !id.includes('image')) {
+          category = 'pro';
+          displayName = 'Gemini 3 Pro';
+          description = 'Next generation pro model';
+          costTier = 4; // Most expensive
+          shouldInclude = true;
+        }
+        
+        if (shouldInclude) {
+          // Only add if we don't already have a model with this display name
+          if (!modelMap.has(displayName)) {
+            modelMap.set(displayName, {
+              id,
+              name: displayName,
+              description,
+              category,
+              costTier,
+            });
+          }
+        }
+      });
+    
+    const models = Array.from(modelMap.values()).sort((a, b) => {
+      // Sort by cost tier first (cheapest to costlier)
+      if (a.costTier !== b.costTier) {
+        return a.costTier - b.costTier;
+      }
+      // Then by category
+      const categoryOrder: Record<AvailableModel['category'], number> = { 
+        flash: 0, 
+        pro: 1, 
+        experimental: 2, 
+        other: 3,
+        embedding: 4 
+      };
+      const aOrder = categoryOrder[a.category] ?? 5;
+      const bOrder = categoryOrder[b.category] ?? 5;
+      if (aOrder !== bOrder) {
+        return aOrder - bOrder;
+      }
+      // Finally by name
+      return a.name.localeCompare(b.name);
+    });
+    
+    return models;
+  } catch (error) {
+    console.error('Error getting models for UI:', error);
     return [];
   }
 }

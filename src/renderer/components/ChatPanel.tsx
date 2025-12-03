@@ -2,9 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronRightIcon } from "./Icons";
 import {
   streamMessageToGemini,
-  GEMINI_MODELS,
-  listAvailableModels,
-  type GeminiModel,
+  getAvailableModelsForUI,
+  type AvailableModel,
 } from "../services/gemini";
 import ReactMarkdown from "react-markdown";
 
@@ -44,17 +43,25 @@ export function ChatPanel({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedModel, setSelectedModel] =
-    useState<GeminiModel>("gemini-2.5-flash");
+    useState<string>("gemini-2.5-flash");
+  const [availableModels, setAvailableModels] = useState<AvailableModel[]>([]);
   const [showModelSelector, setShowModelSelector] = useState(false);
+  const [modelSearchQuery, setModelSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // List available models on mount
+  // Load available models on mount
   useEffect(() => {
-    listAvailableModels().then((models) => {
+    getAvailableModelsForUI().then((models) => {
       if (models.length > 0) {
-        console.log("Available Gemini models:", models);
+        setAvailableModels(models);
+        // Set default to first flash model or first model
+        const defaultModel =
+          models.find((m) => m.category === "flash") || models[0];
+        if (defaultModel) {
+          setSelectedModel(defaultModel.id);
+        }
       }
     });
   }, []);
@@ -148,7 +155,7 @@ export function ChatPanel({
 
       for await (const chunk of streamMessageToGemini(
         chatMessages,
-        selectedModel
+        selectedModel as any
       )) {
         if (abortControllerRef.current?.signal.aborted) {
           break;
@@ -210,53 +217,9 @@ export function ChatPanel({
     <div className="w-80 bg-[var(--bg-secondary)] border-l border-[var(--border-primary)] flex flex-col h-full">
       {/* Header */}
       <div className="h-10 flex items-center justify-between px-3 border-b border-[var(--border-primary)] shrink-0">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-            Intellirite Chat
-          </h2>
-          <div className="relative">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowModelSelector(!showModelSelector);
-              }}
-              className="text-xs px-2 py-0.5 bg-[var(--bg-primary)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-              title="Select AI model"
-            >
-              {GEMINI_MODELS.find((m) => m.id === selectedModel)?.name ||
-                "Model"}
-            </button>
-
-            {/* Model Selector Dropdown */}
-            {showModelSelector && (
-              <div className="absolute top-full left-0 mt-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-md shadow-lg py-1 min-w-[200px] z-50">
-                {GEMINI_MODELS.map((model) => (
-                  <button
-                    key={model.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedModel(model.id);
-                      setShowModelSelector(false);
-                    }}
-                    className={`
-                      w-full text-left px-3 py-1.5 text-xs transition-colors
-                      ${
-                        selectedModel === model.id
-                          ? "bg-[var(--accent-primary)] text-white"
-                          : "text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
-                      }
-                    `}
-                  >
-                    <div className="font-medium">{model.name}</div>
-                    <div className="text-[var(--text-tertiary)] text-[10px]">
-                      {model.description}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+          Intellirite Chat
+        </h2>
         <button
           onClick={onToggleCollapse}
           className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0"
@@ -282,6 +245,198 @@ export function ChatPanel({
 
       {/* Input Area */}
       <div className="border-t border-[var(--border-primary)] p-3 shrink-0">
+        {/* Model Selector - Cursor style, above input */}
+        <div className="relative mb-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowModelSelector(!showModelSelector);
+              setModelSearchQuery("");
+            }}
+            className="text-[11px] px-2 py-1 bg-[var(--bg-primary)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all duration-150 flex items-center gap-1.5 group"
+            title="Select AI model"
+          >
+            <span className="font-medium text-xs">
+              {availableModels.find((m) => m.id === selectedModel)?.name ||
+                selectedModel ||
+                "Select Model"}
+            </span>
+            <svg
+              width="10"
+              height="10"
+              viewBox="0 0 10 10"
+              fill="none"
+              className={`transition-transform duration-150 text-[var(--text-tertiary)] group-hover:text-[var(--text-primary)] ${
+                showModelSelector ? "rotate-180" : ""
+              }`}
+            >
+              <path
+                d="M2.5 3.5L5 6L7.5 3.5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          {/* Model Selector Dropdown - Compact, positioned to not shift UI */}
+          {showModelSelector && (
+            <div className="absolute bottom-full left-0 mb-1.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-md shadow-2xl py-1.5 w-[260px] max-h-[320px] overflow-hidden flex flex-col z-50">
+              {/* Search Input */}
+              <div className="px-2 pb-1.5 mb-1">
+                <div className="relative">
+                  <svg
+                    width="11"
+                    height="11"
+                    viewBox="0 0 11 11"
+                    fill="none"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none"
+                  >
+                    <path
+                      d="M4.5 8C6.433 8 8 6.433 8 4.5C8 2.567 6.433 1 4.5 1C2.567 1 1 2.567 1 4.5C1 6.433 2.567 8 4.5 8Z"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d="M7.5 7.5L10 10"
+                      stroke="currentColor"
+                      strokeWidth="1.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  <input
+                    type="text"
+                    value={modelSearchQuery}
+                    onChange={(e) => setModelSearchQuery(e.target.value)}
+                    placeholder="Search..."
+                    className="w-full pl-6 pr-2 py-1 text-[11px] bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:outline-none focus:border-[var(--accent-primary)] transition-colors"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+
+              {/* Model List */}
+              <div className="overflow-y-auto flex-1 px-1">
+                {(() => {
+                  // Filter models by search query
+                  const filtered = availableModels.filter(
+                    (model) =>
+                      model.name
+                        .toLowerCase()
+                        .includes(modelSearchQuery.toLowerCase()) ||
+                      model.description
+                        .toLowerCase()
+                        .includes(modelSearchQuery.toLowerCase()) ||
+                      model.id
+                        .toLowerCase()
+                        .includes(modelSearchQuery.toLowerCase())
+                  );
+
+                  // Sort all models by cost tier (cheapest first), then by name
+                  const sorted = [...filtered].sort((a, b) => {
+                    if (a.costTier !== b.costTier) {
+                      return a.costTier - b.costTier;
+                    }
+                    return a.name.localeCompare(b.name);
+                  });
+
+                  if (sorted.length === 0) {
+                    return (
+                      <div className="px-2.5 py-4 text-[11px] text-[var(--text-tertiary)] text-center">
+                        No models found
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="py-0.5">
+                      {sorted.map((model) => {
+                        const isSelected = selectedModel === model.id;
+                        const costBadge =
+                          model.costTier === 1
+                            ? "💰"
+                            : model.costTier === 2
+                            ? "💵"
+                            : model.costTier === 3
+                            ? "💸"
+                            : "💳";
+
+                        return (
+                          <button
+                            key={model.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedModel(model.id);
+                              setShowModelSelector(false);
+                              setModelSearchQuery("");
+                            }}
+                            className={`
+                              w-full text-left px-2 py-1.5 text-[11px] transition-all duration-100 rounded
+                              ${
+                                isSelected
+                                  ? "bg-[var(--accent-primary)] text-white"
+                                  : "text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+                              }
+                            `}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <span className="text-[9px] opacity-70 shrink-0">
+                                  {costBadge}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <div
+                                    className={`font-medium truncate text-[11px] ${
+                                      isSelected ? "text-white" : ""
+                                    }`}
+                                  >
+                                    {model.name}
+                                  </div>
+                                  <div
+                                    className={`text-[9px] mt-0.5 truncate ${
+                                      isSelected
+                                        ? "text-white/70"
+                                        : "text-[var(--text-tertiary)]"
+                                    }`}
+                                  >
+                                    {model.description}
+                                  </div>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 12 12"
+                                  fill="none"
+                                  className="shrink-0"
+                                >
+                                  <path
+                                    d="M10 3L4.5 8.5L2 6"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="relative">
           <textarea
             ref={textareaRef}
