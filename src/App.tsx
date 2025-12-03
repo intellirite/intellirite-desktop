@@ -126,13 +126,17 @@ function App() {
   }, [loadFolder, fileSystemReady])
 
   // Handle new file
-  const handleNewFile = useCallback(async (parentPath: string) => {
+  const handleNewFile = useCallback(async (parentPath: string, fileName?: string) => {
     try {
-      const fileName = prompt('Enter file name:')
-      if (!fileName) return
+      // If fileName is provided (from dialog), use it; otherwise prompt
+      let finalFileName = fileName
+      if (!finalFileName) {
+        finalFileName = prompt('Enter file name:')
+        if (!finalFileName) return
+      }
 
       if (window.fileSystem) {
-        await window.fileSystem.createFile(parentPath, fileName)
+        await window.fileSystem.createFile(parentPath, finalFileName)
         await loadFolder(currentFolder || parentPath)
       }
     } catch (error) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronRightIcon, FolderIcon, FileIcon, PlusIcon, EditIcon, TrashIcon } from "./Icons";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { NewFileDialog } from "./NewFileDialog";
 import type { FileItem } from "../../shared/types";
 
 interface SidebarProps {
@@ -9,7 +10,7 @@ interface SidebarProps {
   selectedFileId?: string;
   onFileSelect?: (fileId: string) => void;
   onOpenFolder?: () => void;
-  onNewFile?: (parentPath: string) => void;
+  onNewFile?: (parentPath: string, fileName?: string) => void;
   onNewFolder?: (parentPath: string) => void;
   onRename?: (itemId: string, newName: string) => void;
   onDelete?: (itemId: string) => void;
@@ -36,6 +37,7 @@ export function Sidebar({
     y: number;
     item: FileItem;
   } | null>(null);
+  const [showNewFileDialog, setShowNewFileDialog] = useState(false);
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -247,13 +249,29 @@ export function Sidebar({
               </span>
             )}
           </div>
-          <button
-            onClick={toggleCollapse}
-            className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0"
-            aria-label="Collapse sidebar"
-          >
-            <ChevronRightIcon className="w-3 h-3 text-[var(--text-secondary)] rotate-180" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* New File Button - Cursor style */}
+            {currentFolder && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowNewFileDialog(true);
+                }}
+                className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                aria-label="New file"
+                title="New file"
+              >
+                <PlusIcon className="w-4 h-4" />
+              </button>
+            )}
+            <button
+              onClick={toggleCollapse}
+              className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0"
+              aria-label="Collapse sidebar"
+            >
+              <ChevronRightIcon className="w-3 h-3 text-[var(--text-secondary)] rotate-180" />
+            </button>
+          </div>
         </div>
 
         {/* File Tree or Empty State */}
@@ -301,6 +319,19 @@ export function Sidebar({
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      {/* New File Dialog */}
+      {currentFolder && (
+        <NewFileDialog
+          isOpen={showNewFileDialog}
+          onClose={() => setShowNewFileDialog(false)}
+          onCreate={(fileName) => {
+            onNewFile?.(currentFolder, fileName);
+            setShowNewFileDialog(false);
+          }}
+          currentPath={currentFolder}
         />
       )}
     </>
