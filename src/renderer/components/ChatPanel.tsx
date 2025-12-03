@@ -35,7 +35,7 @@ export function ChatPanel({
       id: "1",
       role: "assistant",
       content:
-        "Hello! I'm Intellirite AI powered by Gemini. How can I help you with your writing today?",
+        "Hello! I'm Intellirite AI. How can I help you with your writing today?",
       timestamp: new Date(),
     },
   ]);

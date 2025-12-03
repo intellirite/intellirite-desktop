@@ -88,20 +88,20 @@ ipcMain.handle("fs-open-folder", async () => {
   }
   return result.filePaths[0];
 });
-ipcMain.handle("fs-read-folder", async (_event, folderPath) => {
+async function readFolderRecursive(folderPath) {
   try {
     const items = await fs.readdir(folderPath, { withFileTypes: true });
     const fileItems = [];
     for (const item of items) {
       const fullPath = path.join(folderPath, item.name);
-      const stats = await fs.stat(fullPath);
       if (item.isDirectory()) {
+        const children = await readFolderRecursive(fullPath);
         fileItems.push({
           id: fullPath,
           name: item.name,
           path: fullPath,
           type: "folder",
-          children: []
+          children
         });
       } else {
         const ext = path.extname(item.name).slice(1);
@@ -121,6 +121,14 @@ ipcMain.handle("fs-read-folder", async (_event, folderPath) => {
       return a.name.localeCompare(b.name);
     });
     return fileItems;
+  } catch (error) {
+    console.error("Error reading folder recursively:", error);
+    throw error;
+  }
+}
+ipcMain.handle("fs-read-folder", async (_event, folderPath) => {
+  try {
+    return await readFolderRecursive(folderPath);
   } catch (error) {
     console.error("Error reading folder:", error);
     throw error;

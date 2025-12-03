@@ -106,10 +106,14 @@ const CloseIcon = () => (
   </svg>
 );
 
+interface TopBarProps {
+  onOpenSettings?: () => void;
+}
+
 /**
  * TopBar component - Custom title bar with app branding, search, and window controls
  */
-export function TopBar() {
+export function TopBar({ onOpenSettings }: TopBarProps = {}) {
   const [searchValue, setSearchValue] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -238,40 +242,74 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* Right: Window controls - Only show on Windows/Linux (Mac has system controls) */}
-      {!isMac && (
-        <div className="flex items-center gap-[2px] min-w-[200px] justify-end [&>*]:no-drag">
+      {/* Right: Settings Button and Window Controls */}
+      <div className="flex items-center gap-2 min-w-[200px] justify-end [&>*]:no-drag">
+        {/* Settings Button */}
+        {onOpenSettings && (
           <button
-            className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
-            onClick={handleMinimize}
-            aria-label="Minimize window"
+            onClick={onOpenSettings}
+            className="flex items-center justify-center w-8 h-8 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)]"
+            aria-label="Settings"
+            title="Settings"
             type="button"
           >
-            <MinimizeIcon />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="w-4 h-4"
+            >
+              <path
+                d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M12.5 8C12.5 7.5 12.7 7.1 12.9 6.8L13.7 5.6C13.9 5.3 13.9 4.9 13.7 4.6L12.1 2.4C11.9 2.1 11.5 2.1 11.2 2.3L10 3.1C9.7 2.9 9.3 2.7 8.8 2.7H7.2C6.7 2.7 6.3 2.9 6 3.1L4.8 2.3C4.5 2.1 4.1 2.1 3.8 2.3L2.2 4.5C2 4.8 2 5.2 2.2 5.5L3 6.7C3.3 7 3.3 7.4 3.1 7.7L2.3 8.9C2.1 9.2 2.1 9.6 2.3 9.9L3.9 12.1C4.1 12.4 4.5 12.4 4.8 12.2L6 11.4C6.3 11.6 6.7 11.8 7.2 11.8H8.8C9.3 11.8 9.7 11.6 10 11.4L11.2 12.2C11.5 12.4 11.9 12.4 12.2 12.2L13.8 10C14 9.7 14 9.3 13.8 9L13 7.8C12.7 7.5 12.5 7.1 12.5 6.6V8Z"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
+        )}
 
-          <button
-            className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
-            onClick={handleMaximize}
-            aria-label={isMaximized ? "Restore window" : "Maximize window"}
-            type="button"
-          >
-            {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
-          </button>
+        {/* Window Controls (Windows/Linux) */}
+        {!isMac && (
+          <>
+            <button
+              className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
+              onClick={handleMinimize}
+              aria-label="Minimize window"
+              type="button"
+            >
+              <MinimizeIcon />
+            </button>
 
-          <button
-            className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[#e81123] hover:text-white active:bg-[#c50f1f] [&_svg]:pointer-events-none"
-            onClick={handleClose}
-            aria-label="Close window"
-            type="button"
-          >
-            <CloseIcon />
-          </button>
-        </div>
-      )}
+            <button
+              className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
+              onClick={handleMaximize}
+              aria-label={isMaximized ? "Restore window" : "Maximize window"}
+              type="button"
+            >
+              {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+            </button>
 
-      {/* Mac: Right side can have settings/actions in the future */}
-      {isMac && <div className="min-w-[200px]" />}
+            <button
+              className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[#e81123] hover:text-white active:bg-[#c50f1f] [&_svg]:pointer-events-none"
+              onClick={handleClose}
+              aria-label="Close window"
+              type="button"
+            >
+              <CloseIcon />
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

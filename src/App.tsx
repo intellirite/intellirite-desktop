@@ -5,6 +5,12 @@ import {
   TabStrip,
   Editor,
   ChatPanel,
+  StatusBar,
+  CommandPalette,
+  SettingsModal,
+  InputDialog,
+  type CursorPosition,
+  type Command,
 } from "./renderer/components";
 import type { FileItem } from "./shared/types";
 import type { TabData } from "./renderer/components/Tab";
@@ -27,6 +33,34 @@ function App() {
 
   // Chat panel state
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+
+  // Status bar state
+  const [cursorPosition, setCursorPosition] = useState<CursorPosition>({
+    line: 1,
+    column: 1,
+  });
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+  // Command palette state
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+  // Settings modal state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Input dialog state (for folder/file creation)
+  const [inputDialog, setInputDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    placeholder: string;
+    defaultValue?: string;
+    onSubmit: (value: string) => void;
+  }>({
+    isOpen: false,
+    title: "",
+    placeholder: "",
+    defaultValue: "",
+    onSubmit: () => {},
+  });
 
   // Check if fileSystem API is available
   useEffect(() => {
@@ -169,59 +203,87 @@ function App() {
 
   // Handle new file
   const handleNewFile = useCallback(
-    async (parentPath: string, fileName?: string) => {
-      try {
-        // If fileName is provided (from dialog), use it; otherwise prompt
-        let finalFileName = fileName;
-        if (!finalFileName) {
-          const promptResult = prompt("Enter file name:");
-          if (!promptResult) return;
-          finalFileName = promptResult;
-        }
-
-        if (window.fileSystem) {
-          await window.fileSystem.createFile(parentPath, finalFileName);
-          await loadFolder(currentFolder || parentPath);
-        }
-      } catch (error) {
-        console.error("Error creating file:", error);
-        alert(`Failed to create file: ${error}`);
+    (parentPath: string, fileName?: string) => {
+      // If fileName is provided (from dialog), use it directly
+      if (fileName) {
+        (async () => {
+          try {
+            if (window.fileSystem) {
+              await window.fileSystem.createFile(parentPath, fileName);
+              await loadFolder(currentFolder || parentPath);
+            }
+          } catch (error) {
+            console.error("Error creating file:", error);
+            alert(`Failed to create file: ${error}`);
+          }
+        })();
+        return;
       }
+
+      // Otherwise show input dialog
+      setInputDialog({
+        isOpen: true,
+        title: "New File",
+        placeholder: "Enter file name (e.g., example.txt)",
+        onSubmit: async (finalFileName: string) => {
+          try {
+            if (window.fileSystem) {
+              await window.fileSystem.createFile(parentPath, finalFileName);
+              await loadFolder(currentFolder || parentPath);
+            }
+          } catch (error) {
+            console.error("Error creating file:", error);
+            alert(`Failed to create file: ${error}`);
+          }
+        },
+      });
     },
     [currentFolder, loadFolder]
   );
 
   // Handle new folder
   const handleNewFolder = useCallback(
-    async (parentPath: string) => {
-      try {
-        const folderName = prompt("Enter folder name:");
-        if (!folderName) return;
-
-        if (window.fileSystem) {
-          await window.fileSystem.createFolder(parentPath, folderName);
-          await loadFolder(currentFolder || parentPath);
-        }
-      } catch (error) {
-        console.error("Error creating folder:", error);
-        alert(`Failed to create folder: ${error}`);
-      }
+    (parentPath: string) => {
+      setInputDialog({
+        isOpen: true,
+        title: "New Folder",
+        placeholder: "Enter folder name",
+        onSubmit: async (folderName: string) => {
+          try {
+            if (window.fileSystem) {
+              await window.fileSystem.createFolder(parentPath, folderName);
+              await loadFolder(currentFolder || parentPath);
+            }
+          } catch (error) {
+            console.error("Error creating folder:", error);
+            alert(`Failed to create folder: ${error}`);
+          }
+        },
+      });
     },
     [currentFolder, loadFolder]
   );
 
   // Handle rename
   const handleRename = useCallback(
-    async (itemId: string, newName: string) => {
-      try {
-        if (window.fileSystem) {
-          await window.fileSystem.rename(itemId, newName);
-          await loadFolder(currentFolder!);
-        }
-      } catch (error) {
-        console.error("Error renaming:", error);
-        alert(`Failed to rename: ${error}`);
-      }
+    (itemId: string, currentName?: string) => {
+      setInputDialog({
+        isOpen: true,
+        title: "Rename",
+        placeholder: "Enter new name",
+        defaultValue: currentName || "",
+        onSubmit: async (newName: string) => {
+          try {
+            if (window.fileSystem) {
+              await window.fileSystem.rename(itemId, newName);
+              await loadFolder(currentFolder!);
+            }
+          } catch (error) {
+            console.error("Error renaming:", error);
+            alert(`Failed to rename: ${error}`);
+          }
+        },
+      });
     },
     [currentFolder, loadFolder]
   );
@@ -358,6 +420,9 @@ function App() {
               )
             );
 
+            // Update last saved time
+            setLastSaved(new Date());
+
             console.log("Auto-saved:", tab.filePath);
           }
         } catch (error) {
@@ -380,6 +445,41 @@ function App() {
     },
     []
   );
+
+  // Auto-open first file when folder is loaded and no tabs exist
+  useEffect(() => {
+    if (
+      files.length > 0 &&
+      tabs.length === 0 &&
+      !activeTabId &&
+      currentFolder
+    ) {
+      const findFirstFile = (items: FileItem[]): FileItem | null => {
+        for (const item of items) {
+          if (item.type === "file") {
+            return item;
+          }
+          if (
+            item.type === "folder" &&
+            item.children &&
+            item.children.length > 0
+          ) {
+            const found = findFirstFile(item.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const firstFile = findFirstFile(files);
+      if (firstFile) {
+        // Small delay to ensure state is ready
+        setTimeout(() => {
+          handleFileSelect(firstFile.id);
+        }, 150);
+      }
+    }
+  }, [files, tabs.length, activeTabId, currentFolder, handleFileSelect]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
@@ -485,9 +585,177 @@ function App() {
     [tabs, currentFolder, loadFolder]
   );
 
+  // Define commands for command palette
+  const commands: Command[] = [
+    {
+      id: "open-folder",
+      label: "Open Folder",
+      description: "Open a folder to start working",
+      category: "File",
+      shortcut: "⌘O",
+      action: handleOpenFolder,
+    },
+    {
+      id: "new-file",
+      label: "New File",
+      description: "Create a new file",
+      category: "File",
+      shortcut: "⌘N",
+      action: () => {
+        if (currentFolder) {
+          handleNewFile(currentFolder);
+        } else {
+          alert("Please open a folder first");
+        }
+      },
+    },
+    {
+      id: "new-folder",
+      label: "New Folder",
+      description: "Create a new folder",
+      category: "File",
+      action: () => {
+        if (currentFolder) {
+          handleNewFolder(currentFolder);
+        } else {
+          alert("Please open a folder first");
+        }
+      },
+    },
+    {
+      id: "toggle-sidebar",
+      label: "Toggle Sidebar",
+      description: "Show or hide the file explorer",
+      category: "View",
+      shortcut: "⌘B",
+      action: () => {
+        // TODO: Implement sidebar toggle
+        console.log("Toggle sidebar");
+      },
+    },
+    {
+      id: "toggle-chat",
+      label: "Toggle Chat Panel",
+      description: "Show or hide the AI chat panel",
+      category: "View",
+      shortcut: "⌘⇧I",
+      action: () => {
+        setIsChatCollapsed(!isChatCollapsed);
+      },
+    },
+    {
+      id: "close-tab",
+      label: "Close Tab",
+      description: "Close the currently active tab",
+      category: "Editor",
+      shortcut: "⌘W",
+      action: () => {
+        if (activeTabId) {
+          handleTabClose(activeTabId);
+        }
+      },
+    },
+    {
+      id: "close-other-tabs",
+      label: "Close Other Tabs",
+      description: "Close all tabs except the active one",
+      category: "Editor",
+      action: () => {
+        if (activeTabId) {
+          handleTabCloseOthers(activeTabId);
+        }
+      },
+    },
+    {
+      id: "close-all-tabs",
+      label: "Close All Tabs",
+      description: "Close all open tabs",
+      category: "Editor",
+      action: handleTabCloseAll,
+    },
+    {
+      id: "command-palette",
+      label: "Show Command Palette",
+      description: "Open the command palette",
+      category: "General",
+      shortcut: "⌘K",
+      action: () => {
+        setIsCommandPaletteOpen(true);
+      },
+    },
+    {
+      id: "settings",
+      label: "Open Settings",
+      description: "Open settings and preferences",
+      category: "General",
+      action: () => {
+        setIsSettingsOpen(true);
+      },
+    },
+  ];
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Cmd/Ctrl+K to open command palette
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+        return;
+      }
+
+      // Don't trigger shortcuts when typing in input/textarea
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
+      // Other shortcuts can be added here
+      if ((e.metaKey || e.ctrlKey) && e.key === "o") {
+        e.preventDefault();
+        handleOpenFolder();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "n") {
+        e.preventDefault();
+        if (currentFolder) {
+          handleNewFile(currentFolder);
+        }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        // TODO: Toggle sidebar
+      } else if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "i"
+      ) {
+        e.preventDefault();
+        setIsChatCollapsed((prev) => !prev);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === "w") {
+        e.preventDefault();
+        if (activeTabId) {
+          handleTabClose(activeTabId);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [
+    handleOpenFolder,
+    handleNewFile,
+    currentFolder,
+    activeTabId,
+    handleTabClose,
+  ]);
+
   return (
     <div className="w-full h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-hidden">
-      <TopBar />
+      <TopBar onOpenSettings={() => setIsSettingsOpen(true)} />
       <div className="flex-1 flex overflow-hidden">
         <Sidebar
           currentFolder={currentFolder}
@@ -527,6 +795,9 @@ function App() {
                     onUpdate={(isModified) =>
                       handleEditorUpdate(activeTab.id, isModified)
                     }
+                    onCursorChange={(line, column) => {
+                      setCursorPosition({ line, column });
+                    }}
                     editable={true}
                   />
                 ) : null;
@@ -555,6 +826,53 @@ function App() {
           onReplaceInEditor={handleChatReplace}
         />
       </div>
+
+      {/* Status Bar */}
+      <StatusBar
+        cursorPosition={cursorPosition}
+        fileType={
+          activeTabId
+            ? tabs
+                .find((t) => t.id === activeTabId)
+                ?.fileName.split(".")
+                .pop()
+            : undefined
+        }
+        lastSaved={lastSaved}
+        editorMode="Insert"
+        isAIConnected={true}
+      />
+
+      {/* Command Palette */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        commands={commands}
+      />
+
+      {/* Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Input Dialog */}
+      <InputDialog
+        isOpen={inputDialog.isOpen}
+        onClose={() =>
+          setInputDialog({
+            isOpen: false,
+            title: "",
+            placeholder: "",
+            defaultValue: "",
+            onSubmit: () => {},
+          })
+        }
+        onSubmit={inputDialog.onSubmit}
+        title={inputDialog.title}
+        placeholder={inputDialog.placeholder}
+        defaultValue={inputDialog.defaultValue}
+      />
     </div>
   );
 }

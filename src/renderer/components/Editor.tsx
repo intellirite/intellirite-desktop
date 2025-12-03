@@ -31,6 +31,7 @@ interface EditorProps {
   content: string;
   onChange?: (content: string) => void;
   onUpdate?: (isModified: boolean) => void;
+  onCursorChange?: (line: number, column: number) => void;
   editable?: boolean;
 }
 
@@ -41,6 +42,7 @@ export function Editor({
   content,
   onChange,
   onUpdate,
+  onCursorChange,
   editable = true,
 }: EditorProps) {
   const [isToolbarVisible, setIsToolbarVisible] = useState(false);
@@ -67,6 +69,51 @@ export function Editor({
       },
     },
   });
+
+  // Track cursor position on selection changes (debounced to prevent infinite loops)
+  useEffect(() => {
+    if (!editor || !onCursorChange) return;
+
+    let timeoutId: NodeJS.Timeout;
+    let lastLine = 1;
+    let lastColumn = 1;
+
+    const updateCursorPosition = () => {
+      clearTimeout(timeoutId);
+
+      timeoutId = setTimeout(() => {
+        const { state } = editor.view;
+        const { selection } = state;
+        const { $anchor } = selection;
+
+        // Get text content up to cursor position
+        const pos = $anchor.pos;
+        const doc = state.doc;
+        const textBefore = doc.textBetween(0, pos);
+        const lines = textBefore.split("\n");
+        const line = lines.length;
+        const column = lines[lines.length - 1].length + 1;
+
+        // Only update if position actually changed
+        if (line !== lastLine || column !== lastColumn) {
+          lastLine = line;
+          lastColumn = column;
+          onCursorChange(line, column);
+        }
+      }, 50); // Debounce by 50ms
+    };
+
+    // Listen to selection updates only (not all transactions)
+    editor.on("selectionUpdate", updateCursorPosition);
+
+    // Initial update
+    updateCursorPosition();
+
+    return () => {
+      clearTimeout(timeoutId);
+      editor.off("selectionUpdate", updateCursorPosition);
+    };
+  }, [editor, onCursorChange]);
 
   useEffect(() => {
     if (editor) {

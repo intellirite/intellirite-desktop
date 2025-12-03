@@ -105,11 +105,7 @@ export function Sidebar({
         label: "Rename",
         icon: <EditIcon />,
         onClick: () => {
-          // TODO: Show rename input
-          const newName = prompt("Enter new name:", item.name);
-          if (newName && newName !== item.name) {
-            onRename?.(item.id, newName);
-          }
+          onRename?.(item.id, item.name);
         },
       },
       {
@@ -252,17 +248,30 @@ export function Sidebar({
           <div className="flex items-center gap-1">
             {/* New File Button - Cursor style */}
             {currentFolder && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowNewFileDialog(true);
-                }}
-                className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                aria-label="New file"
-                title="New file"
-              >
-                <PlusIcon className="w-4 h-4" />
-              </button>
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNewFileDialog(true);
+                  }}
+                  className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  aria-label="New file"
+                  title="New file"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNewFolder?.(currentFolder);
+                  }}
+                  className="w-6 h-6 flex items-center justify-center hover:bg-[var(--bg-hover)] rounded transition-colors shrink-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                  aria-label="New folder"
+                  title="New folder"
+                >
+                  <FolderIcon className="w-4 h-4" />
+                </button>
+              </>
             )}
             <button
               onClick={toggleCollapse}
