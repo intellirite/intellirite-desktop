@@ -169,6 +169,26 @@ ipcMain.handle('fs-read-folder', async (_event, folderPath: string) => {
   }
 })
 
+ipcMain.handle('fs-read-file', async (_event, filePath: string) => {
+  try {
+    const content = await fs.readFile(filePath, 'utf8')
+    return { success: true, content }
+  } catch (error) {
+    console.error('Error reading file:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('fs-write-file', async (_event, filePath: string, content: string) => {
+  try {
+    await fs.writeFile(filePath, content, 'utf8')
+    return { success: true }
+  } catch (error) {
+    console.error('Error writing file:', error)
+    throw error
+  }
+})
+
 ipcMain.handle('fs-create-file', async (_event, parentPath: string, fileName: string) => {
   try {
     const filePath = path.join(parentPath, fileName)

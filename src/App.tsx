@@ -1,12 +1,23 @@
-import { useState, useEffect, useCallback } from 'react'
-import { TopBar, Sidebar } from './renderer/components'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { TopBar, Sidebar, TabStrip, Editor } from './renderer/components'
 import type { FileItem } from './shared/types'
+import type { TabData } from './renderer/components/Tab'
+import TurndownService from 'turndown'
+import { marked } from 'marked'
 
 function App() {
   const [currentFolder, setCurrentFolder] = useState<string | undefined>()
   const [files, setFiles] = useState<FileItem[]>([])
   const [selectedFileId, setSelectedFileId] = useState<string | undefined>()
   const [fileSystemReady, setFileSystemReady] = useState(false)
+  
+  // Tab management
+  const [tabs, setTabs] = useState<TabData[]>([])
+  const [activeTabId, setActiveTabId] = useState<string | null>(null)
+  
+  // Auto-save debounce refs
+  const saveTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const turndownService = useRef(new TurndownService())
 
   // Check if fileSystem API is available
   useEffect(() => {
@@ -187,12 +198,205 @@ function App() {
     }
   }, [currentFolder, loadFolder])
 
-  // Handle file select
-  const handleFileSelect = useCallback((fileId: string) => {
+  // Handle file select - open file in tab
+  const handleFileSelect = useCallback(async (fileId: string) => {
     setSelectedFileId(fileId)
-    // TODO: Open file in editor
-    console.log('Selected file:', fileId)
+    
+    // Check if tab already exists
+    const existingTab = tabs.find(tab => tab.filePath === fileId)
+    if (existingTab) {
+      setActiveTabId(existingTab.id)
+      return
+    }
+
+    // Create new tab
+    try {
+      // Read file content
+      let content = ''
+      if (window.fileSystem) {
+        try {
+          const result = await window.fileSystem.readFile(fileId)
+          if (result.success) {
+            content = result.content
+            
+            // Convert markdown to HTML for TipTap if it's a markdown file
+            const extension = fileId.split('.').pop()?.toLowerCase()
+            if (extension === 'md' || extension === 'markdown') {
+              // Convert markdown to HTML for TipTap
+              if (content.trim() && !content.trim().startsWith('<')) {
+                content = marked.parse(content) as string
+              }
+            } else {
+              // For non-markdown files, convert plain text to HTML paragraphs
+              if (!content.trim().startsWith('<')) {
+                // Convert plain text to HTML paragraphs
+                const lines = content.split('\n').filter(line => line.trim())
+                if (lines.length > 0) {
+                  content = lines.map(line => `<p>${line}</p>`).join('')
+                } else {
+                  content = '<p></p>' // Empty paragraph for empty files
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error reading file:', error)
+          content = '<p>Error loading file content</p>'
+        }
+      }
+
+      const fileName = fileId.split('/').pop() || 'Untitled'
+      const newTab: TabData = {
+        id: `tab-${Date.now()}-${Math.random()}`,
+        filePath: fileId,
+        fileName: fileName,
+        isModified: false,
+        content: content,
+      }
+
+      setTabs(prev => [...prev, newTab])
+      setActiveTabId(newTab.id)
+    } catch (error) {
+      console.error('Error opening file:', error)
+      alert(`Failed to open file: ${error}`)
+    }
+  }, [tabs])
+
+  // Handle editor content change with auto-save
+  const handleEditorChange = useCallback((tabId: string, content: string) => {
+    const tab = tabs.find(t => t.id === tabId)
+    if (!tab) return
+
+    // Update tab content and mark as modified
+    setTabs(prev => prev.map(t => 
+      t.id === tabId 
+        ? { ...t, content, isModified: true }
+        : t
+    ))
+
+    // Clear existing timeout for this tab
+    const existingTimeout = saveTimeouts.current.get(tabId)
+    if (existingTimeout) {
+      clearTimeout(existingTimeout)
+    }
+
+    // Set new timeout for auto-save (debounced - 1 second)
+    const timeout = setTimeout(async () => {
+      try {
+        if (window.fileSystem) {
+          // Convert HTML to markdown for .md files, otherwise save as HTML
+          const extension = tab.filePath.split('.').pop()?.toLowerCase()
+          let contentToSave = content
+
+          if (extension === 'md' || extension === 'markdown') {
+            // Convert HTML to markdown
+            contentToSave = turndownService.current.turndown(content)
+          } else if (extension === 'txt') {
+            // Extract plain text from HTML
+            const div = document.createElement('div')
+            div.innerHTML = content
+            contentToSave = div.textContent || div.innerText || ''
+          }
+          // For other file types, save as HTML
+
+          await window.fileSystem.writeFile(tab.filePath, contentToSave)
+          
+          // Mark as not modified after save
+          setTabs(prev => prev.map(t => 
+            t.id === tabId 
+              ? { ...t, isModified: false }
+              : t
+          ))
+          
+          console.log('Auto-saved:', tab.filePath)
+        }
+      } catch (error) {
+        console.error('Error auto-saving file:', error)
+        // Don't show alert for auto-save errors, just log
+      }
+      
+      saveTimeouts.current.delete(tabId)
+    }, 1000) // 1 second debounce
+
+    saveTimeouts.current.set(tabId, timeout)
+  }, [tabs])
+
+  // Handle editor update (modified state) - this is called by TipTap
+  const handleEditorUpdate = useCallback((tabId: string, isModified: boolean) => {
+    // This is handled by handleEditorChange, but keeping for compatibility
   }, [])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      saveTimeouts.current.forEach(timeout => clearTimeout(timeout))
+      saveTimeouts.current.clear()
+    }
+  }, [])
+
+  // Tab operations
+  const handleTabSelect = useCallback((tabId: string) => {
+    setActiveTabId(tabId)
+  }, [])
+
+  const handleTabClose = useCallback((tabId: string) => {
+    setTabs(prev => {
+      const newTabs = prev.filter(tab => tab.id !== tabId)
+      // If closing active tab, switch to another tab
+      if (tabId === activeTabId) {
+        if (newTabs.length > 0) {
+          setActiveTabId(newTabs[newTabs.length - 1].id)
+        } else {
+          setActiveTabId(null)
+        }
+      }
+      return newTabs
+    })
+  }, [activeTabId])
+
+  const handleTabCloseOthers = useCallback((tabId: string) => {
+    setTabs(prev => prev.filter(tab => tab.id === tabId))
+    setActiveTabId(tabId)
+  }, [])
+
+  const handleTabCloseAll = useCallback(() => {
+    setTabs([])
+    setActiveTabId(null)
+  }, [])
+
+  const handleTabRevealInExplorer = useCallback(async (filePath: string) => {
+    // TODO: Implement reveal in explorer (requires Electron shell API)
+    console.log('Reveal in explorer:', filePath)
+    alert('Reveal in Explorer feature coming soon')
+  }, [])
+
+  const handleTabRename = useCallback(async (tabId: string, newName: string) => {
+    const tab = tabs.find(t => t.id === tabId)
+    if (!tab) return
+
+    try {
+      // Rename file on disk
+      if (window.fileSystem) {
+        await window.fileSystem.rename(tab.filePath, newName)
+        
+        // Update tab
+        const newPath = tab.filePath.replace(tab.fileName, newName)
+        setTabs(prev => prev.map(t => 
+          t.id === tabId 
+            ? { ...t, fileName: newName, filePath: newPath }
+            : t
+        ))
+        
+        // Reload folder to reflect changes
+        if (currentFolder) {
+          await loadFolder(currentFolder)
+        }
+      }
+    } catch (error) {
+      console.error('Error renaming file:', error)
+      alert(`Failed to rename file: ${error}`)
+    }
+  }, [tabs, currentFolder, loadFolder])
 
   return (
     <div className="w-full h-screen flex flex-col bg-[var(--bg-primary)] text-[var(--text-primary)] overflow-hidden">
@@ -209,9 +413,43 @@ function App() {
           onRename={handleRename}
           onDelete={handleDelete}
         />
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-          <h1 className="text-xl font-semibold text-[var(--text-white)]">Intellirite</h1>
-          <p className="text-md text-[var(--text-secondary)]">Desktop Writing IDE</p>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tab Strip */}
+          <TabStrip
+            tabs={tabs}
+            activeTabId={activeTabId}
+            onTabSelect={handleTabSelect}
+            onTabClose={handleTabClose}
+            onTabCloseOthers={handleTabCloseOthers}
+            onTabCloseAll={handleTabCloseAll}
+            onTabRevealInExplorer={handleTabRevealInExplorer}
+            onTabRename={handleTabRename}
+          />
+          
+          {/* Editor Area */}
+          <div className="flex-1 flex flex-col overflow-hidden bg-[var(--bg-primary)]">
+            {activeTabId ? (
+              (() => {
+                const activeTab = tabs.find(t => t.id === activeTabId)
+                return activeTab ? (
+                  <Editor
+                    content={activeTab.content || ''}
+                    onChange={(content) => handleEditorChange(activeTab.id, content)}
+                    onUpdate={(isModified) => handleEditorUpdate(activeTab.id, isModified)}
+                    editable={true}
+                  />
+                ) : null
+              })()
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
+                <h1 className="text-xl font-semibold text-[var(--text-white)]">Intellirite</h1>
+                <p className="text-md text-[var(--text-secondary)]">Desktop Writing IDE</p>
+                <p className="text-sm text-[var(--text-tertiary)] mt-4">
+                  Click a file in the sidebar to open it
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

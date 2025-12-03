@@ -41,6 +41,8 @@ try {
   electron.contextBridge.exposeInMainWorld("fileSystem", {
     openFolder: () => electron.ipcRenderer.invoke("fs-open-folder"),
     readFolder: (path) => electron.ipcRenderer.invoke("fs-read-folder", path),
+    readFile: (filePath) => electron.ipcRenderer.invoke("fs-read-file", filePath),
+    writeFile: (filePath, content) => electron.ipcRenderer.invoke("fs-write-file", filePath, content),
     createFile: (path, name) => electron.ipcRenderer.invoke("fs-create-file", path, name),
     createFolder: (path, name) => electron.ipcRenderer.invoke("fs-create-folder", path, name),
     rename: (oldPath, newName) => electron.ipcRenderer.invoke("fs-rename", oldPath, newName),

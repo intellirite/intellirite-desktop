@@ -94,23 +94,23 @@ This document breaks down the Intellirite desktop app development into manageabl
 
 ## Part 4: Center Workspace - Tabs & Editor
 
-### 4.1 Tab System
+### 4.1 Tab System ✅
 
-- [ ] Create tab strip component
-- [ ] Implement tab UI (filename, modified dot, close button)
-- [ ] Handle tab overflow (scrollable)
-- [ ] Add double-click to rename
-- [ ] Create tab context menu (Close, Close Others, Close All, Reveal in Explorer)
-- [ ] Implement tab switching
+- [x] Create tab strip component
+- [x] Implement tab UI (filename, modified dot, close button)
+- [x] Handle tab overflow (scrollable)
+- [x] Add double-click to rename
+- [x] Create tab context menu (Close, Close Others, Close All, Reveal in Explorer)
+- [x] Implement tab switching
 
-### 4.2 Editor Setup (TipTap)
+### 4.2 Editor Setup (TipTap) ✅
 
-- [ ] Install and configure TipTap
-- [ ] Set up basic rich text editing
-- [ ] Add markdown support
-- [ ] Implement syntax highlighting for code blocks
-- [ ] Add inline toolbar (bold, italic, underline, etc.)
-- [ ] Add block-level toolbar on hover
+- [x] Install and configure TipTap
+- [x] Set up basic rich text editing
+- [x] Add markdown support (via StarterKit)
+- [x] Implement syntax highlighting for code blocks (lowlight with multiple languages)
+- [x] Add inline toolbar (bold, italic, underline, etc.)
+- [x] Add block-level toolbar on hover
 
 ### 4.3 Editor Features
 
@@ -279,9 +279,12 @@ This document breaks down the Intellirite desktop app development into manageabl
 - ✅ Part 1: Project Setup & Electron Foundation
 - ✅ Part 2: Top Bar & Window Controls
 - ✅ Part 3: Left Sidebar (File Explorer UI)
+
   - ✅ Part 3.1: Sidebar Structure
   - ✅ Part 3.2: File Tree UI
   - ✅ Part 3.3: Context Menu
   - ✅ Part 3.4: File System Integration (Open Folder, Read Structure, Create Files/Folders, Rename, Delete)
 
-**Next Steps:** Part 4.1 - Tab System
+- ✅ Part 4.1: Tab System (Tab Strip, Tab UI, Overflow Handling, Rename, Context Menu, Switching)
+
+**Next Steps:** Part 4.2 - Editor Setup (TipTap)

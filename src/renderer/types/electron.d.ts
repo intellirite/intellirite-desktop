@@ -22,6 +22,8 @@ interface WindowControls {
 interface FileSystem {
     openFolder: () => Promise<string | null>;
     readFolder: (path: string) => Promise<any[]>;
+    readFile: (filePath: string) => Promise<{ success: boolean; content: string }>;
+    writeFile: (filePath: string, content: string) => Promise<{ success: boolean }>;
     createFile: (path: string, name: string) => Promise<{ success: boolean; path: string }>;
     createFolder: (path: string, name: string) => Promise<{ success: boolean; path: string }>;
     rename: (oldPath: string, newName: string) => Promise<{ success: boolean; path: string }>;

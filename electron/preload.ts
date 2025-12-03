@@ -52,6 +52,8 @@ try {
   contextBridge.exposeInMainWorld('fileSystem', {
     openFolder: () => ipcRenderer.invoke('fs-open-folder'),
     readFolder: (path: string) => ipcRenderer.invoke('fs-read-folder', path),
+    readFile: (filePath: string) => ipcRenderer.invoke('fs-read-file', filePath),
+    writeFile: (filePath: string, content: string) => ipcRenderer.invoke('fs-write-file', filePath, content),
     createFile: (path: string, name: string) => ipcRenderer.invoke('fs-create-file', path, name),
     createFolder: (path: string, name: string) => ipcRenderer.invoke('fs-create-folder', path, name),
     rename: (oldPath: string, newName: string) => ipcRenderer.invoke('fs-rename', oldPath, newName),
