@@ -28,4 +28,10 @@ contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('window-minimize'),
   maximize: () => ipcRenderer.send('window-maximize'),
   close: () => ipcRenderer.send('window-close'),
+  getState: () => ipcRenderer.invoke('window-get-state'),
+  onStateChange: (callback: (state: { isMaximized: boolean }) => void) => {
+    const listener = (_event: unknown, state: { isMaximized: boolean }) => callback(state)
+    ipcRenderer.on('window-state-changed', listener)
+    return () => ipcRenderer.removeListener('window-state-changed', listener)
+  },
 })

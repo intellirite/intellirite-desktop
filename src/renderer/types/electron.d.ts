@@ -1,9 +1,15 @@
 // Type declarations for Electron APIs exposed to renderer
 
+interface WindowState {
+    isMaximized: boolean;
+}
+
 interface WindowControls {
     minimize: () => void;
     maximize: () => void;
     close: () => void;
+    getState: () => Promise<WindowState>;
+    onStateChange: (callback: (state: WindowState) => void) => () => void;
 }
 
 declare global {

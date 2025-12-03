@@ -44,6 +44,17 @@ function createWindow() {
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
+    // Send initial window state
+    win?.webContents.send('window-state-changed', { isMaximized: win.isMaximized() })
+  })
+
+  // Listen to window state changes
+  win.on('maximize', () => {
+    win?.webContents.send('window-state-changed', { isMaximized: true })
+  })
+
+  win.on('unmaximize', () => {
+    win?.webContents.send('window-state-changed', { isMaximized: false })
   })
 
   if (VITE_DEV_SERVER_URL) {
@@ -69,6 +80,10 @@ ipcMain.on('window-maximize', () => {
 
 ipcMain.on('window-close', () => {
   win?.close()
+})
+
+ipcMain.handle('window-get-state', () => {
+  return { isMaximized: win?.isMaximized() ?? false }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

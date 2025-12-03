@@ -23,5 +23,11 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
 electron.contextBridge.exposeInMainWorld("windowControls", {
   minimize: () => electron.ipcRenderer.send("window-minimize"),
   maximize: () => electron.ipcRenderer.send("window-maximize"),
-  close: () => electron.ipcRenderer.send("window-close")
+  close: () => electron.ipcRenderer.send("window-close"),
+  getState: () => electron.ipcRenderer.invoke("window-get-state"),
+  onStateChange: (callback) => {
+    const listener = (_event, state) => callback(state);
+    electron.ipcRenderer.on("window-state-changed", listener);
+    return () => electron.ipcRenderer.removeListener("window-state-changed", listener);
+  }
 });
