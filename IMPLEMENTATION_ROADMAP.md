@@ -79,11 +79,14 @@ This document breaks down the Intellirite desktop app development into manageabl
 - [x] Position menu on right-click
 - [x] Close menu on outside click
 
-### 3.4 File System Integration
+### 3.4 File System Integration ✅
 
 - [x] Implement "Open Folder" dialog (Electron)
 - [x] Read folder structure and populate tree
 - [x] Handle file/folder creation (local fs)
+  - [x] New File dialog with file type selection (Cursor-like UI)
+  - [x] Support for 30+ file types (md, txt, json, pdf, ts, js, etc.)
+  - [x] New Folder creation via context menu
 - [x] Handle rename operations
 - [x] Handle delete operations with confirmation
 
@@ -269,15 +272,16 @@ This document breaks down the Intellirite desktop app development into manageabl
 
 ## Current Status
 
-**Active Part:** Part 3 - Left Sidebar (File Explorer UI) ✅ (Completed)
+**Active Part:** Part 4 - Center Workspace (Tabs & Editor) 🚧 (In Progress)
 
 **Completed:**
 
 - ✅ Part 1: Project Setup & Electron Foundation
 - ✅ Part 2: Top Bar & Window Controls
-- ✅ Part 3.1: Sidebar Structure
-- ✅ Part 3.2: File Tree UI
-- ✅ Part 3.3: Context Menu
-- ✅ Part 3.4: File System Integration
+- ✅ Part 3: Left Sidebar (File Explorer UI)
+  - ✅ Part 3.1: Sidebar Structure
+  - ✅ Part 3.2: File Tree UI
+  - ✅ Part 3.3: Context Menu
+  - ✅ Part 3.4: File System Integration (Open Folder, Read Structure, Create Files/Folders, Rename, Delete)
 
-**Next Steps:** Part 4 - Center Workspace (Tabs & Editor)
+**Next Steps:** Part 4.1 - Tab System
