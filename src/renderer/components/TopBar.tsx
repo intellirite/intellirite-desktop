@@ -113,30 +113,56 @@ export function TopBar() {
   const [searchValue, setSearchValue] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
 
+  // Safely detect platform with fallback
+  const isMac = (() => {
+    try {
+      // Try to use exposed platform API
+      if (typeof window !== "undefined" && (window as any).platform) {
+        return (window as any).platform.isMac === true;
+      }
+      // Fallback: detect from user agent
+      return navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+    } catch (error) {
+      // Fallback to user agent detection on error
+      return navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+    }
+  })();
+
   // Initialize and listen to window state changes
   useEffect(() => {
-    // Get initial window state
-    window.windowControls
-      .getState()
-      .then((state) => {
-        setIsMaximized(state.isMaximized);
-      })
-      .catch((error) => {
-        console.error("Failed to get initial window state:", error);
-      });
+    // Safely check if windowControls is available
+    if (typeof window !== "undefined" && (window as any).windowControls) {
+      try {
+        // Get initial window state
+        (window as any).windowControls
+          .getState()
+          .then((state: { isMaximized: boolean }) => {
+            setIsMaximized(state.isMaximized);
+          })
+          .catch((error: Error) => {
+            console.error("Failed to get initial window state:", error);
+          });
 
-    // Listen to window state changes
-    const unsubscribe = window.windowControls.onStateChange((state) => {
-      setIsMaximized(state.isMaximized);
-    });
+        // Listen to window state changes
+        const unsubscribe = (window as any).windowControls.onStateChange(
+          (state: { isMaximized: boolean }) => {
+            setIsMaximized(state.isMaximized);
+          }
+        );
 
-    return unsubscribe;
+        return unsubscribe;
+      } catch (error) {
+        console.error("Window controls not available:", error);
+      }
+    }
   }, []);
 
   // Window control handlers with error handling
   const handleMinimize = useCallback(() => {
     try {
-      window.windowControls.minimize();
+      if ((window as any).windowControls) {
+        (window as any).windowControls.minimize();
+      }
     } catch (error) {
       console.error("Failed to minimize window:", error);
     }
@@ -144,7 +170,9 @@ export function TopBar() {
 
   const handleMaximize = useCallback(() => {
     try {
-      window.windowControls.maximize();
+      if ((window as any).windowControls) {
+        (window as any).windowControls.maximize();
+      }
     } catch (error) {
       console.error("Failed to maximize window:", error);
     }
@@ -152,26 +180,48 @@ export function TopBar() {
 
   const handleClose = useCallback(() => {
     try {
-      window.windowControls.close();
+      if ((window as any).windowControls) {
+        (window as any).windowControls.close();
+      }
     } catch (error) {
       console.error("Failed to close window:", error);
     }
   }, []);
 
   return (
-    <div className="flex items-center justify-between h-10 bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] px-2 select-none drag-region">
-      {/* Left: App branding */}
-      <div className="flex items-center gap-2 min-w-[200px] [&>*]:no-drag">
-        <div
-          className="flex items-center justify-center w-5 h-5 text-[var(--accent-primary)]"
-          aria-hidden="true"
-        >
-          <AppIcon />
+    <div
+      className="flex items-center justify-between h-10 bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] px-2 select-none drag-region"
+      style={{ paddingLeft: isMac ? "78px" : "8px" }}
+    >
+      {/* Left: App branding - Only show if not Mac (Mac has system controls on left) */}
+      {!isMac && (
+        <div className="flex items-center gap-2 min-w-[200px] [&>*]:no-drag">
+          <div
+            className="flex items-center justify-center w-5 h-5 text-[var(--accent-primary)]"
+            aria-hidden="true"
+          >
+            <AppIcon />
+          </div>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
+            Intellirite
+          </span>
         </div>
-        <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
-          Intellirite
-        </span>
-      </div>
+      )}
+
+      {/* Mac: Show app branding in center-left area (after system controls) */}
+      {isMac && (
+        <div className="flex items-center gap-2 [&>*]:no-drag">
+          <div
+            className="flex items-center justify-center w-5 h-5 text-[var(--accent-primary)]"
+            aria-hidden="true"
+          >
+            <AppIcon />
+          </div>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight">
+            Intellirite
+          </span>
+        </div>
+      )}
 
       {/* Middle: Search input */}
       <div className="flex-1 flex justify-center max-w-[600px] mx-auto [&>*]:no-drag">
@@ -188,35 +238,40 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* Right: Window controls */}
-      <div className="flex items-center gap-[2px] min-w-[200px] justify-end [&>*]:no-drag">
-        <button
-          className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
-          onClick={handleMinimize}
-          aria-label="Minimize window"
-          type="button"
-        >
-          <MinimizeIcon />
-        </button>
+      {/* Right: Window controls - Only show on Windows/Linux (Mac has system controls) */}
+      {!isMac && (
+        <div className="flex items-center gap-[2px] min-w-[200px] justify-end [&>*]:no-drag">
+          <button
+            className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
+            onClick={handleMinimize}
+            aria-label="Minimize window"
+            type="button"
+          >
+            <MinimizeIcon />
+          </button>
 
-        <button
-          className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
-          onClick={handleMaximize}
-          aria-label={isMaximized ? "Restore window" : "Maximize window"}
-          type="button"
-        >
-          {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
-        </button>
+          <button
+            className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] active:bg-[var(--bg-active)] [&_svg]:pointer-events-none"
+            onClick={handleMaximize}
+            aria-label={isMaximized ? "Restore window" : "Maximize window"}
+            type="button"
+          >
+            {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+          </button>
 
-        <button
-          className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[#e81123] hover:text-white active:bg-[#c50f1f] [&_svg]:pointer-events-none"
-          onClick={handleClose}
-          aria-label="Close window"
-          type="button"
-        >
-          <CloseIcon />
-        </button>
-      </div>
+          <button
+            className="flex items-center justify-center w-10 h-10 text-[var(--text-secondary)] bg-transparent border-none cursor-pointer transition-all duration-100 rounded-none hover:bg-[#e81123] hover:text-white active:bg-[#c50f1f] [&_svg]:pointer-events-none"
+            onClick={handleClose}
+            aria-label="Close window"
+            type="button"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+      )}
+
+      {/* Mac: Right side can have settings/actions in the future */}
+      {isMac && <div className="min-w-[200px]" />}
     </div>
   );
 }

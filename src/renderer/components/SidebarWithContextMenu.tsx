@@ -265,18 +265,7 @@ export function Sidebar({
                 Open a folder to begin writing
               </p>
               <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('Open Folder button clicked');
-                  console.log('onOpenFolder function:', onOpenFolder);
-                  if (onOpenFolder) {
-                    onOpenFolder();
-                  } else {
-                    console.error('onOpenFolder is not defined');
-                    alert('Open folder handler not available');
-                  }
-                }}
+                onClick={onOpenFolder}
                 className="px-4 py-2 text-sm bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white rounded transition-colors mt-2"
               >
                 Open Folder

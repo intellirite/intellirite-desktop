@@ -1,6 +1,9 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { platform } from 'process'
+import fs from 'node:fs/promises'
+import { existsSync, readFileSync } from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -25,27 +28,48 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 
 let win: BrowserWindow | null
 
 function createWindow() {
+  const isMac = platform === 'darwin'
+  
   win = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1000,
     minHeight: 600,
     frame: false, // Frameless window for custom title bar
-    titleBarStyle: 'hidden',
+    // On macOS, use 'hiddenInset' to provide space for traffic lights
+    // On Windows/Linux, use 'hidden' for full custom control
+    titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
     backgroundColor: '#1e1e1e', // Dark theme background
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false, // Allow loading local files in dev
     },
   })
 
+  // Log preload path for debugging
+  const preloadPath = path.join(__dirname, 'preload.mjs')
+  console.log('[MAIN] Preload script path:', preloadPath)
+  console.log('[MAIN] Preload script exists:', existsSync(preloadPath))
+  if (existsSync(preloadPath)) {
+    const preloadContent = readFileSync(preloadPath, 'utf8')
+    console.log('[MAIN] Preload script size:', preloadContent.length, 'bytes')
+    console.log('[MAIN] Preload contains fileSystem:', preloadContent.includes('fileSystem'))
+  }
+
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
+    console.log('[MAIN] Window finished loading')
     win?.webContents.send('main-process-message', (new Date).toLocaleString())
     // Send initial window state
     win?.webContents.send('window-state-changed', { isMaximized: win.isMaximized() })
+  })
+
+  // Log preload errors
+  win.webContents.on('preload-error', (event, preloadPath, error) => {
+    console.error('[MAIN] Preload error:', preloadPath, error)
   })
 
   // Listen to window state changes
@@ -84,6 +108,121 @@ ipcMain.on('window-close', () => {
 
 ipcMain.handle('window-get-state', () => {
   return { isMaximized: win?.isMaximized() ?? false }
+})
+
+// File system IPC handlers
+ipcMain.handle('fs-open-folder', async () => {
+  if (!win) return null
+  
+  const result = await dialog.showOpenDialog(win, {
+    properties: ['openDirectory'],
+  })
+  
+  if (result.canceled || result.filePaths.length === 0) {
+    return null
+  }
+  
+  return result.filePaths[0]
+})
+
+ipcMain.handle('fs-read-folder', async (_event, folderPath: string) => {
+  try {
+    const items = await fs.readdir(folderPath, { withFileTypes: true })
+    const fileItems = []
+    
+    for (const item of items) {
+      const fullPath = path.join(folderPath, item.name)
+      const stats = await fs.stat(fullPath)
+      
+      if (item.isDirectory()) {
+        fileItems.push({
+          id: fullPath,
+          name: item.name,
+          path: fullPath,
+          type: 'folder' as const,
+          children: [],
+        })
+      } else {
+        const ext = path.extname(item.name).slice(1)
+        fileItems.push({
+          id: fullPath,
+          name: item.name,
+          path: fullPath,
+          type: 'file' as const,
+          extension: ext || undefined,
+        })
+      }
+    }
+    
+    // Sort: folders first, then files, both alphabetically
+    fileItems.sort((a, b) => {
+      if (a.type !== b.type) {
+        return a.type === 'folder' ? -1 : 1
+      }
+      return a.name.localeCompare(b.name)
+    })
+    
+    return fileItems
+  } catch (error) {
+    console.error('Error reading folder:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('fs-create-file', async (_event, parentPath: string, fileName: string) => {
+  try {
+    const filePath = path.join(parentPath, fileName)
+    await fs.writeFile(filePath, '', 'utf8')
+    return { success: true, path: filePath }
+  } catch (error) {
+    console.error('Error creating file:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('fs-create-folder', async (_event, parentPath: string, folderName: string) => {
+  try {
+    const folderPath = path.join(parentPath, folderName)
+    await fs.mkdir(folderPath, { recursive: true })
+    return { success: true, path: folderPath }
+  } catch (error) {
+    console.error('Error creating folder:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('fs-rename', async (_event, oldPath: string, newName: string) => {
+  try {
+    const dir = path.dirname(oldPath)
+    const newPath = path.join(dir, newName)
+    
+    if (existsSync(newPath)) {
+      throw new Error('A file or folder with that name already exists')
+    }
+    
+    await fs.rename(oldPath, newPath)
+    return { success: true, path: newPath }
+  } catch (error) {
+    console.error('Error renaming:', error)
+    throw error
+  }
+})
+
+ipcMain.handle('fs-delete', async (_event, itemPath: string) => {
+  try {
+    const stats = await fs.stat(itemPath)
+    
+    if (stats.isDirectory()) {
+      await fs.rmdir(itemPath, { recursive: true })
+    } else {
+      await fs.unlink(itemPath)
+    }
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error deleting:', error)
+    throw error
+  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

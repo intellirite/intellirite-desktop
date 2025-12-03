@@ -74,18 +74,18 @@ This document breaks down the Intellirite desktop app development into manageabl
 
 ### 3.3 Context Menu
 
-- [ ] Create context menu component
-- [ ] Add menu items: New File, New Folder, Rename, Delete
-- [ ] Position menu on right-click
-- [ ] Close menu on outside click
+- [x] Create context menu component
+- [x] Add menu items: New File, New Folder, Rename, Delete
+- [x] Position menu on right-click
+- [x] Close menu on outside click
 
 ### 3.4 File System Integration
 
-- [ ] Implement "Open Folder" dialog (Electron)
-- [ ] Read folder structure and populate tree
-- [ ] Handle file/folder creation (local fs)
-- [ ] Handle rename operations
-- [ ] Handle delete operations with confirmation
+- [x] Implement "Open Folder" dialog (Electron)
+- [x] Read folder structure and populate tree
+- [x] Handle file/folder creation (local fs)
+- [x] Handle rename operations
+- [x] Handle delete operations with confirmation
 
 ---
 
@@ -269,7 +269,7 @@ This document breaks down the Intellirite desktop app development into manageabl
 
 ## Current Status
 
-**Active Part:** Part 3 - Left Sidebar (File Explorer UI) 🚧 (In Progress)
+**Active Part:** Part 3 - Left Sidebar (File Explorer UI) ✅ (Completed)
 
 **Completed:**
 
@@ -277,5 +277,7 @@ This document breaks down the Intellirite desktop app development into manageabl
 - ✅ Part 2: Top Bar & Window Controls
 - ✅ Part 3.1: Sidebar Structure
 - ✅ Part 3.2: File Tree UI
+- ✅ Part 3.3: Context Menu
+- ✅ Part 3.4: File System Integration
 
-**Next Steps:** Part 3.3 - Context Menu, Part 3.4 - File System Integration
+**Next Steps:** Part 4 - Center Workspace (Tabs & Editor)
