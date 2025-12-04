@@ -1,308 +1,355 @@
-# Intellirite Implementation Roadmap
+Core Objective
 
-This document breaks down the Intellirite desktop app development into manageable steps, following the PRD requirements.
+Enable Gemini to:
 
-## Part 1: Project Setup & Electron Foundation ✅ (Current Part)
+Understand multiple files (context window)
 
-### 1.1 Initialize Electron + React + TypeScript Project
+Edit the currently open file
 
-- [ ] Set up Electron with React and TypeScript
-- [ ] Configure build tools (Vite/Webpack)
-- [ ] Set up hot reload for development
-- [ ] Configure Electron Builder for packaging
-- [ ] Test basic window creation
+Add or modify content with precise patches
 
-### 1.2 Project Structure
+Write structured, literary, academic content
 
-- [x] Create folder structure:
-  - `src/main/` - Electron main process
-  - `src/renderer/` - React UI
-  - `src/shared/` - Shared types/utilities
-  - `src/renderer/components/` - UI components
-  - `src/renderer/styles/` - CSS/styling
-- [x] Set up TypeScript configs for main and renderer
-- [x] Configure path aliases
+Modify long paragraphs safely
 
-### 1.3 Basic Window & Theme Setup
+Handle multi-file references (#chapter1.md, #notes.md etc.)
 
-- [x] Create main window with proper dimensions
-- [x] Implement frameless window (custom title bar)
-- [x] Set up dark theme as default
-- [x] Configure color palette (grays, accent colors)
-- [x] Set up Inter/JetBrains Mono fonts
+Maintain semantic and structural integrity
 
----
+1 — Architecture Overview
+1.1 Components
 
-## Part 2: Top Bar & Window Controls ✅
+Context Builder
 
-### 2.1 Custom Title Bar
+Converts open files + selected files + conversation history → a compressed prompt
 
-- [x] Create TopBar component
-- [x] Add app icon + "Intellirite" text (left)
-- [x] Add search input (middle, placeholder only)
-- [x] Add window controls (minimize, maximize, close) - right
-- [x] Implement drag area (excluding interactive elements)
-- [x] Style to match Cursor's minimalist design
+AI Instruction Orchestrator
 
-### 2.2 Window Control Functionality
+Builds system prompt + task instructions
 
-- [x] Wire up minimize button to IPC
-- [x] Wire up maximize/restore button to IPC
-- [x] Wire up close button to IPC
-- [x] Handle window state changes (maximized/restored)
-- [x] Update maximize button icon based on window state
-- [x] Add proper error handling and TypeScript types
+Patch Generator (AI Response)
 
----
+Gemini responds with diff/patch or replacement blocks
 
-## Part 3: Left Sidebar - File Explorer UI
+Patch Parser
 
-### 3.1 Sidebar Structure
+Parses the returned patch format into actual file edits
 
-- [x] Create collapsible sidebar component
-- [x] Add folder name header
-- [x] Implement collapse/expand toggle
-- [x] Add empty state: "Open a folder to begin writing"
+Editor Integration
 
-### 3.2 File Tree UI
+Applies changes to TipTap/Monaco editor
 
-- [x] Create tree component with expand/collapse
-- [x] Add file/folder icons (different for .md, .txt, .json, .pdf)
-- [x] Implement hover actions (New File, New Folder buttons)
-- [x] Add selected file highlighting
-- [ ] Implement lazy rendering for large trees (future optimization)
+2 — Context Sources
 
-### 3.3 Context Menu
+Gemini needs maximum context to write accurately.
 
-- [x] Create context menu component
-- [x] Add menu items: New File, New Folder, Rename, Delete
-- [x] Position menu on right-click
-- [x] Close menu on outside click
+Sources to include:
+1. Open File
 
-### 3.4 File System Integration ✅
+Always send full content of currently open file
 
-- [x] Implement "Open Folder" dialog (Electron)
-- [x] Read folder structure and populate tree
-- [x] Handle file/folder creation (local fs)
-  - [x] New File dialog with file type selection (Cursor-like UI)
-  - [x] Support for 30+ file types (md, txt, json, pdf, ts, js, etc.)
-  - [x] New Folder creation via context menu
-- [x] Handle rename operations
-- [x] Handle delete operations with confirmation
+Include cursor position range (start, end)
 
----
+Include selected text (if exists)
 
-## Part 4: Center Workspace - Tabs & Editor
+2. Additional Referenced Files
 
-### 4.1 Tab System ✅
+If user says:
 
-- [x] Create tab strip component
-- [x] Implement tab UI (filename, modified dot, close button)
-- [x] Handle tab overflow (scrollable)
-- [x] Add double-click to rename
-- [x] Create tab context menu (Close, Close Others, Close All, Reveal in Explorer)
-- [x] Implement tab switching
+“use #chapter1.md and #notes.md”
 
-### 4.2 Editor Setup (TipTap) ✅
+Then include:
 
-- [x] Install and configure TipTap
-- [x] Set up basic rich text editing
-- [x] Add markdown support (via StarterKit)
-- [x] Implement syntax highlighting for code blocks (lowlight with multiple languages)
-- [x] Add inline toolbar (bold, italic, underline, etc.)
-- [x] Add block-level toolbar on hover
+filenames
 
-### 4.3 Editor Features
+file contents
 
-- [ ] Implement heading support (H1-H6)
-- [ ] Add list support (ordered, unordered)
-- [ ] Add code block support
-- [ ] Implement split view (editor left, preview right)
-- [ ] Add markdown preview rendering
+short summaries (auto-summarized if too long)
 
-### 4.4 File Operations
+3. Recent Chat Messages
 
-- [ ] Open file from tree into editor
-- [ ] Track modified state (show dot in tab)
-- [ ] Implement auto-save (debounced)
-- [ ] Handle multiple open files
-- [ ] Sync editor content with file system
+Keep last 4–6 messages for memory.
 
----
+4. System Instructions
 
-## Part 5: Right Sidebar - AI Chat Panel UI ✅
+Your custom rules for:
 
-### 5.1 Chat Panel Structure ✅
+academic style
 
-- [x] Create collapsible chat sidebar
-- [x] Add header: "Intellirite Chat"
-- [x] Implement collapse/expand toggle
+structure
 
-### 5.2 Chat UI Components ✅
+citations
 
-- [x] Create message bubble component
-- [x] Add timestamp display
-- [x] Create static example messages
-- [x] Style with proper spacing and colors
+no hallucination
 
-### 5.3 Chat Input ✅
+patch format
 
-- [x] Create textarea input
-- [x] Add send button
-- [x] Add mic button (UI only)
-- [x] Add expand button
-- [x] Handle enter to send (UI only)
+3 — Context Building Logic (Very Important)
+3.1 Context Assembly Flow
+1. Identify open file → include full text
+2. Check for explicit references (#file.md) → load them
+3. Generate 1–2 sentence summaries for long referenced files
+4. Identify the selected text → include separately
+5. Load user’s last 5 chat messages
+6. Combine into structured prompt
 
-### 5.4 Chat Interactions (UI Only) ✅
+3.2 Use format like this:
+# CURRENT FILE (chapter2.md)
+<content>
 
-- [x] Add "Insert" and "Replace" hover actions on messages
-- [x] Implement drag-to-editor UI (placeholder)
-- [x] Add visual feedback for interactions
+# USER SELECTION
+<selected_text>
 
----
+# REFERENCED FILES
+## file: chapter1.md (summary included / full if short)
+<content or summary>
 
-## Part 6: Bottom Status Bar ✅
+## file: notes.md (full)
+<content>
 
-### 6.1 Status Bar Layout ✅
+# SYSTEM RULES
+- You are modifying files using structured patches.
+- Only respond in patch format (specified below).
+- Do not rewrite entire document unless asked.
+- Maintain structure.
+- Do not hallucinate citations.
 
-- [x] Create status bar component
-- [x] Left: Line/Column display ("Ln 1, Col 1")
-- [x] Middle: File type indicator
-- [x] Right: Last saved time, editor mode, AI status icon
+# USER REQUEST
+Rewrite this section to be more academic.
 
-### 6.2 Status Bar Updates ✅
+4 — Patch Format (The Most Critical Part)
 
-- [x] Update cursor position on editor changes
-- [x] Update file type when switching tabs
-- [x] Update last saved time on save
-- [x] Handle all status updates reactively
+Gemini should return structured patches, NOT plain text.
 
----
+Use the safest modern patch format:
 
-## Part 7: Command Palette ✅
+4.1 Recommended Patch Format
+<patch>
+{
+  "file": "chapter2.md",
+  "type": "replace",
+  "target": {
+     "startLine": 45,
+     "endLine": 63
+  },
+  "replacement": "New rewritten content here..."
+}
+</patch>
 
-### 7.1 Command Palette UI ✅
 
-- [x] Create modal overlay component
-- [x] Create centered palette component (VSCode-like)
-- [x] Add search input
-- [x] Create command list UI
+Or multiple:
 
-### 7.2 Command System ✅
+<patches>
+[
+  {
+    "file": "chapter2.md",
+    "type": "insert",
+    "line": 120,
+    "content": "Inserted paragraph..."
+  },
+  {
+    "file": "chapter1.md",
+    "type": "replace",
+    "target": { "startLine": 20, "endLine": 25 },
+    "replacement": "Updated intro..."
+  }
+]
+</patches>
 
-- [x] Define command list (Create file, Open folder, Toggle panels, etc.)
-- [x] Implement fuzzy search (client-side)
-- [x] Add keyboard navigation (arrow keys, enter, esc)
-- [x] Wire up commands to actions
+5 — Editor Integration (Execution Layer)
+5.1 Steps to Apply Patch
 
-### 7.3 Keyboard Trigger ✅
+Parse JSON
 
-- [x] Implement Cmd/Ctrl+K to open palette
-- [x] Handle Esc to close
-- [x] Handle Enter to execute selected command
+Determine file to edit
 
----
+Calculate indexes using line numbers
 
-## Part 8: Modals & Dialogs
+Apply patch inside TipTap/Editor
 
-### 8.1 Modal System
+Highlight the changed area
 
-- [ ] Create reusable modal component
-- [ ] Add overlay with proper z-index
-- [ ] Handle Esc to close
-- [ ] Handle click outside to close
+Show a diff view (optional but powerful)
 
-### 8.2 Required Modals
+Allow undo via one shortcut
 
-- [ ] Open folder dialog
-- [ ] Confirm delete dialog
-- [ ] Rename file dialog
-- [ ] Settings modal (theme, font size, editor preferences)
-- [ ] About modal
+5.2 Safety Features
 
----
+Validate JSON
 
-## Part 9: Keyboard Shortcuts
+Validate line range
 
-### 9.1 Global Shortcuts Setup
+Reject overly large rewrites unless user approves
 
-- [ ] Create keyboard shortcut manager
-- [ ] Handle platform differences (Cmd vs Ctrl)
+Provide "approve → apply" flow (like Cursor's ghost changes)
 
-### 9.2 Implement All Shortcuts
+6 — User Interaction UX (Cursor-Like)
+6.1 Interaction Flow
 
-- [ ] Cmd/Ctrl + O: Open Folder
-- [ ] Cmd/Ctrl + N: New File
-- [ ] Cmd/Ctrl + S: Save File
-- [ ] Cmd/Ctrl + K: Command Palette
-- [ ] Cmd/Ctrl + B: Toggle Sidebar
-- [ ] Cmd/Ctrl + Shift + I: Toggle Chat
-- [ ] Editor shortcuts (Bold, Italic, Heading, etc.)
+User selects text → writes question → Gemini responds → patch appears → user reviews → apply.
 
----
+6.2 “Apply / Discard / Edit” Popup
 
-## Part 10: Polish & Refinement
+After response:
 
-### 10.1 Visual Polish
+“Apply Changes”
 
-- [x] Add smooth animations (hover, open, collapse)
-- [x] Implement smooth tab transitions
-- [x] Add file icons with colors
-- [x] Fine-tune spacing and alignment
-- [x] Add subtle shadows and rounded corners
+“Show Diff”
 
-### 10.2 Optional Enhancements
+“Cancel”
 
-- [ ] Breadcrumb navigation (top of editor)
-- [ ] Inline slash commands (/heading, /table, etc.)
-- [ ] Improved file tree performance
-- [ ] Additional keyboard shortcuts
+“Edit Patch” (allows modifying AI output)
 
-### 10.3 Testing & Packaging
+6.3 Drag AI text → into editor
 
-- [ ] Test all keyboard shortcuts
-- [ ] Test file operations
-- [ ] Test on macOS
-- [ ] Test on Windows
-- [ ] Test on Linux
-- [ ] Build with Electron Builder
-- [ ] Create installers for all platforms
+Already in your UI — now attach patch logic.
 
----
+7 — Multi-File Editing Flow
 
-## Current Status
+When user requests multi-file editing:
 
-**Active Part:** Part 10 - Polish & Refinement ✅ (Completed)
+“Fix grammar in all chapters.”
+“Improve intro of #chapter1.md and #chapter2.md.”
 
-**Completed:**
+Steps:
 
-- ✅ Part 1: Project Setup & Electron Foundation
-- ✅ Part 2: Top Bar & Window Controls
-- ✅ Part 3: Left Sidebar (File Explorer UI)
-  - ✅ Part 3.1: Sidebar Structure
-  - ✅ Part 3.2: File Tree UI
-  - ✅ Part 3.3: Context Menu
-  - ✅ Part 3.4: File System Integration (Open Folder, Read Structure, Create Files/Folders, Rename, Delete)
-- ✅ Part 4: Center Workspace (Tabs & Editor)
-  - ✅ Part 4.1: Tab System (Tab Strip, Tab UI, Overflow Handling, Rename, Context Menu, Switching)
-  - ✅ Part 4.2: Editor Setup (TipTap with markdown, syntax highlighting, toolbar)
-  - ✅ Part 4.4: File Operations (Read/Write files, Auto-save)
-- ✅ Part 5: Right Sidebar (AI Chat Panel UI)
-  - ✅ Part 5.1: Chat Panel Structure (Collapsible sidebar, header, toggle)
-  - ✅ Part 5.2: Chat UI Components (Message bubbles, timestamps, example messages)
-  - ✅ Part 5.3: Chat Input (Textarea, send button, mic button, expand button, Enter to send)
-  - ✅ Part 5.4: Chat Interactions (Insert/Replace actions, drag-to-editor, visual feedback)
-- ✅ Part 6: Bottom Status Bar
-  - ✅ Part 6.1: Status Bar Layout (Line/Column, File Type, Saved Time, Editor Mode, AI Status)
-  - ✅ Part 6.2: Status Bar Updates (Cursor position tracking, file type updates, last saved time)
-- ✅ Part 7: Command Palette
-  - ✅ Part 7.1: Command Palette UI (Modal overlay, centered palette, search input, command list)
-  - ✅ Part 7.2: Command System (Command list, fuzzy search, keyboard navigation, action wiring)
-  - ✅ Part 7.3: Keyboard Trigger (Cmd/Ctrl+K, Esc to close, Enter to execute)
-- ✅ Part 8: Modals & Dialogs
-  - ✅ Part 8.1: Modal System (Reusable modal components, overlay, Esc to close, click outside to close)
-  - ✅ Part 8.2: Required Modals (InputDialog, SettingsModal, ContextMenu)
-- ✅ Part 10: Polish & Refinement
-  - ✅ Part 10.1: Visual Polish (Smooth animations, tab transitions, colored file icons, spacing/alignment, shadows/rounded corners)
+Detect referenced files
 
-**Next Steps:** Part 9 - Keyboard Shortcuts (Optional) or Part 10.3 - Testing & Packaging
+Build summaries if too long
+
+Ask Gemini for structured multi-patch output
+
+Show a list:
+
+chapter1.md — 2 changes
+chapter2.md — 1 change
+
+
+User clicks → see diff → apply.
+
+8 — Context Size Optimization
+If files are too large:
+
+Summarize sections beyond the selected range
+
+Include full content of:
+
+selected text
+
++/- 200 lines around cursor
+
+Keep total context < model limit.
+9 — Gemini Model Recommendations
+
+Use:
+
+Gemini 1.5 Flash for small, fast tasks
+
+Gemini 1.5 Pro for:
+
+long writing
+
+multi-file edits
+
+academic tasks
+
+Implement auto-switching based on:
+
+prompt length
+
+file references
+
+10 — Detailed Step-by-Step Implementation Plan
+Phase 1: Context Engine
+
+Create a “context manager” that knows:
+
+current file
+
+selection
+
+referenced files
+
+file tree
+
+Implement file summary engine (local LLMLight or simple headings parser)
+
+Build JSON for context block
+
+Phase 2: Structured Prompts
+
+Write system prompt for patch format
+
+Force Gemini into JSON-mode with safety checks
+
+Build templates:
+
+rewrite selection
+
+insert content
+
+replace range
+
+explain content
+
+summarize
+
+Phase 3: Patch Parsing
+
+Implement JSON parser
+
+Handle:
+
+insert
+
+replace
+
+delete
+
+Add error handling:
+
+missing fields
+
+invalid line numbers
+
+Phase 4: Editor Application
+
+Translate line numbers → editor indexes
+
+Highlight changed areas
+
+Add approval flow
+
+Implement diff view
+
+Phase 5: Multi-File Editing
+
+Loop through patches
+
+Show per-file diff list
+
+Apply each independently
+
+11 — Example Prompt to Gemini (You Will Implement This)
+You are an AI writing engine for the Intellirite IDE.
+You will return ONLY JSON patches, no prose.
+
+# TASK
+Rewrite the selected section to be more formal and academic.
+
+# CURRENT FILE (chapter2.md)
+<file contents>
+
+# SELECTION (lines 45-63)
+<selection>
+
+# OUTPUT FORMAT
+<patch>{
+  "file": "chapter2.md",
+  "type": "replace",
+  "target": { "startLine": 45, "endLine": 63 },
+  "replacement": "..."
+}</patch>
+
+
+Gemini responds in perfect patch format.

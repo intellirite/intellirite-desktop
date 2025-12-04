@@ -30,6 +30,9 @@ function App() {
   // Auto-save debounce refs
   const saveTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const turndownService = useRef(new TurndownService());
+  
+  // Editor ref for AI chat integration
+  const editorRef = useRef<any>(null);
 
   // Chat panel state
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
@@ -788,6 +791,7 @@ function App() {
                 const activeTab = tabs.find((t) => t.id === activeTabId);
                 return activeTab ? (
                   <Editor
+                    ref={editorRef}
                     content={activeTab.content || ""}
                     onChange={(content) =>
                       handleEditorChange(activeTab.id, content)
@@ -824,6 +828,11 @@ function App() {
           onToggleCollapse={() => setIsChatCollapsed(!isChatCollapsed)}
           onInsertToEditor={handleChatInsert}
           onReplaceInEditor={handleChatReplace}
+          editor={editorRef.current}
+          currentFilePath={activeTabId ? tabs.find(t => t.id === activeTabId)?.filePath : undefined}
+          currentFileName={activeTabId ? tabs.find(t => t.id === activeTabId)?.fileName : undefined}
+          workspacePath={currentFolder}
+          cursorPosition={cursorPosition}
         />
       </div>
 

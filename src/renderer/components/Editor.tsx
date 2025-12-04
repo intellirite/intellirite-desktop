@@ -21,7 +21,7 @@ import { Focus } from "@tiptap/extension-focus";
 import { Dropcursor } from "@tiptap/extension-dropcursor";
 import { Gapcursor } from "@tiptap/extension-gapcursor";
 import { createLowlight } from "lowlight";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
 
 // Import languages for syntax highlighting
 import javascript from "highlight.js/lib/languages/javascript";
@@ -75,13 +75,16 @@ interface EditorProps {
 /**
  * Advanced Editor component using TipTap with extensive features
  */
-export function Editor({
-  content,
-  onChange,
-  onUpdate,
-  onCursorChange,
-  editable = true,
-}: EditorProps) {
+export const Editor = forwardRef<any, EditorProps>(function Editor(
+  {
+    content,
+    onChange,
+    onUpdate,
+    onCursorChange,
+    editable = true,
+  },
+  ref
+) {
   const [linkUrl, setLinkUrl] = useState("");
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
@@ -173,6 +176,9 @@ export function Editor({
       },
     },
   });
+
+  // Expose editor instance to parent via ref
+  useImperativeHandle(ref, () => editor, [editor]);
 
   // Track cursor position and line count based on visual lines
   useEffect(() => {
@@ -1065,4 +1071,4 @@ export function Editor({
       </div>
     </div>
   );
-}
+});

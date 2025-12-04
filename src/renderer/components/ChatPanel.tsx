@@ -6,6 +6,8 @@ import {
   type AvailableModel,
 } from "../services/gemini";
 import ReactMarkdown from "react-markdown";
+import { useAIChat } from "../hooks/useAIChat";
+import type { Editor } from "@tiptap/react";
 
 interface Message {
   id: string;
@@ -19,6 +21,12 @@ interface ChatPanelProps {
   onToggleCollapse?: () => void;
   onInsertToEditor?: (content: string) => void;
   onReplaceInEditor?: (content: string) => void;
+  // AI Context props
+  editor?: Editor | null;
+  currentFilePath?: string;
+  currentFileName?: string;
+  workspacePath?: string;
+  cursorPosition?: { line: number; column: number };
 }
 
 /**
@@ -29,13 +37,18 @@ export function ChatPanel({
   onToggleCollapse,
   onInsertToEditor,
   onReplaceInEditor,
+  editor,
+  currentFilePath,
+  currentFileName,
+  workspacePath,
+  cursorPosition,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
       role: "assistant",
       content:
-        "Hello! I'm Intellirite AI. How can I help you with your writing today?",
+        "Hello! I'm Intellirite AI, your intelligent coding assistant.\n\nI can help you:\n- Answer questions about your code\n- Explain how things work\n- Edit and improve your files\n- Reference multiple files with @filename\n\nI have access to your current file and can see the full context. Just ask me anything!",
       timestamp: new Date(),
     },
   ]);
@@ -50,6 +63,24 @@ export function ChatPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const [contextFiles, setContextFiles] = useState<string[]>([]);
+  
+  // AI Chat hook for context awareness
+  const { sendAIMessage, extractFileReferences } = useAIChat();
+  
+  // Update context files indicator when props change
+  useEffect(() => {
+    const files: string[] = [];
+    if (currentFileName) {
+      files.push(currentFileName);
+    }
+    // Extract @file references from input
+    if (inputValue) {
+      const refs = extractFileReferences(inputValue);
+      files.push(...refs);
+    }
+    setContextFiles([...new Set(files)]); // Remove duplicates
+  }, [currentFileName, inputValue, extractFileReferences]);
 
   // Load available models on mount
   useEffect(() => {
@@ -134,28 +165,21 @@ export function ChatPanel({
     setMessages((prev) => [...prev, assistantMessage]);
 
     try {
-      // Convert messages to Gemini format (all previous messages + new user message)
-      // Filter out empty messages and ensure we only send complete conversation pairs
-      const previousMessages = messages
-        .filter((m) => m.content.trim().length > 0) // Only non-empty messages
-        .map((m) => ({
-          role: m.role as "user" | "assistant",
-          content: m.content,
-        }));
-
-      // Add the new user message
-      const chatMessages = [
-        ...previousMessages,
-        { role: "user" as const, content: userInput },
-      ];
-
-      // Stream response from Gemini
+      // Use AI-aware message sending with context
       let fullResponse = "";
       abortControllerRef.current = new AbortController();
 
-      for await (const chunk of streamMessageToGemini(
-        chatMessages,
-        selectedModel as any
+      // Send message with full context (editor, files, etc.)
+      for await (const chunk of sendAIMessage(
+        userInput,
+        messages,
+        {
+          editor: editor || undefined,
+          currentFilePath,
+          currentFileName,
+          workspacePath,
+          cursorInfo: cursorPosition,
+        }
       )) {
         if (abortControllerRef.current?.signal.aborted) {
           break;
@@ -607,7 +631,17 @@ function MessageBubble({
       >
         {/* Action Buttons (hover) */}
         {!isUser && showActions && (
-          <div className="absolute -right-12 top-0 flex items-center gap-1">
+          <div className="absolute -right-20 top-0 flex items-center gap-1">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(message.content);
+                // Optional: show toast notification
+              }}
+              className="w-6 h-6 flex items-center justify-center bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-xs text-[var(--text-primary)] transition-colors"
+              title="Copy to clipboard"
+            >
+              📋
+            </button>
             <button
               onClick={() => onInsert?.(message.content)}
               className="w-6 h-6 flex items-center justify-center bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] rounded text-xs text-[var(--text-primary)] transition-colors"

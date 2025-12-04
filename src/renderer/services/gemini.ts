@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Gemini API Key
-const API_KEY = "AIzaSyBctR3TN6nJgmk8ZkzNAxO9QJSksq-Tx28";
+const API_KEY = "AIzaSyDZHXrnvHTOTSC0G4leRKMAIAPbtK1vOPk";
 
 // Available Gemini models (updated to match actual available models)
 export const GEMINI_MODELS = [

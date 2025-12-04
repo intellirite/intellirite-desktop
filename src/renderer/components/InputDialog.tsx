@@ -49,7 +49,7 @@ export function InputDialog({
   };
 
 
-  
+
   if (!isOpen) return null;
 
   return (
@@ -82,6 +82,7 @@ export function InputDialog({
           <input
             ref={inputRef}
             type="text"
+            
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
