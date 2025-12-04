@@ -11,6 +11,7 @@ interface FileIconProps extends IconProps {
 }
 
 /**
+ * 
  * Chevron Right Icon - Used for expand/collapse indicators
  */
 export function ChevronRightIcon({ className = "" }: IconProps) {

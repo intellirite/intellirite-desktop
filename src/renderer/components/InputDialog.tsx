@@ -10,9 +10,7 @@ interface InputDialogProps {
   label?: string;
 }
 
-/**
- * InputDialog - Simple input dialog for text input
- */
+
 export function InputDialog({
   isOpen,
   onClose,
@@ -50,6 +48,8 @@ export function InputDialog({
     }
   };
 
+
+  
   if (!isOpen) return null;
 
   return (

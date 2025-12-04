@@ -74,6 +74,11 @@ export function Sidebar({
     return <FileIcon extension={item.extension} />;
   };
 
+
+
+
+
+
   const getContextMenuItems = (item: FileItem): ContextMenuItem[] => {
     const items: ContextMenuItem[] = [];
 
@@ -128,6 +133,8 @@ export function Sidebar({
     const isSelected = selectedFileId === item.id;
     const hasChildren = item.children && item.children.length > 0;
 
+
+    
     return (
       <div key={item.id}>
         <div

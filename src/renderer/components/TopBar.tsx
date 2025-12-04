@@ -110,6 +110,12 @@ interface TopBarProps {
   onOpenSettings?: () => void;
 }
 
+
+
+
+
+
+
 /**
  * TopBar component - Custom title bar with app branding, search, and window controls
  */
@@ -181,6 +187,8 @@ export function TopBar({ onOpenSettings }: TopBarProps = {}) {
       console.error("Failed to maximize window:", error);
     }
   }, []);
+
+  
 
   const handleClose = useCallback(() => {
     try {
