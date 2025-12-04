@@ -21,7 +21,13 @@ import { Focus } from "@tiptap/extension-focus";
 import { Dropcursor } from "@tiptap/extension-dropcursor";
 import { Gapcursor } from "@tiptap/extension-gapcursor";
 import { createLowlight } from "lowlight";
-import { useEffect, useState, useRef, forwardRef, useImperativeHandle } from "react";
+import {
+  useEffect,
+  useState,
+  useRef,
+  forwardRef,
+  useImperativeHandle,
+} from "react";
 
 // Import languages for syntax highlighting
 import javascript from "highlight.js/lib/languages/javascript";
@@ -76,13 +82,7 @@ interface EditorProps {
  * Advanced Editor component using TipTap with extensive features
  */
 export const Editor = forwardRef<any, EditorProps>(function Editor(
-  {
-    content,
-    onChange,
-    onUpdate,
-    onCursorChange,
-    editable = true,
-  },
+  { content, onChange, onUpdate, onCursorChange, editable = true },
   ref
 ) {
   const [linkUrl, setLinkUrl] = useState("");
@@ -93,6 +93,16 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
   const [currentLine, setCurrentLine] = useState(1);
   const editorContentRef = useRef<HTMLDivElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
+
+  // Search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchMatches, setSearchMatches] = useState<
+    Array<{ start: number; end: number }>
+  >([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(-1);
+  const [caseSensitive, setCaseSensitive] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -352,6 +362,262 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
     };
   }, [editor]);
 
+  // Re-apply highlights when editor content updates (if search is active)
+  useEffect(() => {
+    if (
+      !editor ||
+      !isSearchOpen ||
+      !searchTerm.trim() ||
+      searchMatches.length === 0
+    ) {
+      return;
+    }
+
+    const handleUpdate = () => {
+      // Re-apply highlights after a short delay to let ProseMirror finish updating
+      setTimeout(() => {
+        if (
+          currentMatchIndex >= 0 &&
+          currentMatchIndex < searchMatches.length
+        ) {
+          highlightAllMatches(searchMatches, currentMatchIndex);
+        }
+      }, 50);
+    };
+
+    editor.on("update", handleUpdate);
+    return () => {
+      editor.off("update", handleUpdate);
+    };
+  }, [editor, isSearchOpen, searchTerm, searchMatches, currentMatchIndex]);
+
+  // Handle Cmd+F / Ctrl+F keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd+F on Mac, Ctrl+F on Windows/Linux
+      if ((e.metaKey || e.ctrlKey) && e.key === "f") {
+        e.preventDefault();
+        setIsSearchOpen(true);
+        // Focus search input after a brief delay to ensure it's rendered
+        setTimeout(() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.select();
+        }, 50);
+      }
+
+      // Escape to close search
+      if (e.key === "Escape" && isSearchOpen) {
+        setIsSearchOpen(false);
+        setSearchTerm("");
+        setSearchMatches([]);
+        setCurrentMatchIndex(-1);
+        clearSearchHighlights();
+        editor?.commands.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [editor, isSearchOpen]);
+
+  // Perform search when search term changes and highlight matches
+  useEffect(() => {
+    if (!editor || !searchTerm.trim()) {
+      setSearchMatches([]);
+      setCurrentMatchIndex(-1);
+      clearSearchHighlights();
+      return;
+    }
+
+    const text = editor.getText();
+    const flags = caseSensitive ? "g" : "gi";
+    const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escapedTerm, flags);
+    const matches: Array<{ start: number; end: number }> = [];
+    let match;
+
+    // Find all matches
+    while ((match = regex.exec(text)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+
+    setSearchMatches(matches);
+
+    // Highlight all matches
+    if (matches.length > 0) {
+      setCurrentMatchIndex(0);
+      highlightAllMatches(matches, 0);
+      scrollToMatch(matches[0].start, matches[0].end);
+    } else {
+      setCurrentMatchIndex(-1);
+      clearSearchHighlights();
+    }
+  }, [editor, searchTerm, caseSensitive]);
+
+  // Clear all search highlights using TipTap's API
+  const clearSearchHighlights = () => {
+    if (!editor) return;
+
+    // Remove all highlight marks from the entire document
+    const { state } = editor.view;
+    const { tr } = state;
+    const highlightType = state.schema.marks.highlight;
+
+    // Remove all highlight marks
+    state.doc.descendants((node, pos) => {
+      if (node.isText && node.marks) {
+        node.marks.forEach((mark) => {
+          if (mark.type === highlightType) {
+            // Check if it's a search highlight (yellow or orange)
+            const color = mark.attrs?.color;
+            if (color === "#ffff00" || color === "#ffa500") {
+              tr.removeMark(pos, pos + node.nodeSize, highlightType);
+            }
+          }
+        });
+      }
+    });
+
+    editor.view.dispatch(tr);
+  };
+
+  // Convert text position to ProseMirror document position
+  const textPosToDocPos = (textPos: number): number => {
+    if (!editor) return 1;
+
+    const { state } = editor.view;
+    let docPos = 1; // Start after the document start
+
+    // Walk through the document and count text positions
+    let textOffset = 0;
+    state.doc.descendants((node, pos) => {
+      if (node.isText && textOffset <= textPos) {
+        const nodeText = node.text || "";
+        if (textOffset + nodeText.length >= textPos) {
+          // Found the node containing this position
+          const offsetInNode = textPos - textOffset;
+          docPos = pos + offsetInNode + 1; // +1 for the node start
+          return false; // Stop iteration
+        }
+        textOffset += nodeText.length;
+      }
+      return true;
+    });
+
+    return docPos;
+  };
+
+  // Highlight all matches using TipTap's Highlight extension
+  const highlightAllMatches = (
+    matches: Array<{ start: number; end: number }>,
+    currentIndex: number
+  ) => {
+    if (!editor || matches.length === 0) return;
+
+    // Clear existing highlights first
+    clearSearchHighlights();
+
+    // Use TipTap's transaction system
+    const { state } = editor.view;
+    const { tr } = state;
+    const highlightType = state.schema.marks.highlight;
+
+    // Process matches in reverse order to avoid position shifting
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const match = matches[i];
+      const isCurrent = i === currentIndex;
+      const color = isCurrent ? "#ffa500" : "#ffff00"; // Orange for current, yellow for others
+
+      try {
+        // Convert text positions to document positions
+        const docStart = textPosToDocPos(match.start);
+        const docEnd = textPosToDocPos(match.end);
+
+        if (docStart < docEnd && docStart > 0) {
+          // Create highlight mark
+          const mark = highlightType.create({ color });
+
+          // Add mark to the transaction
+          tr.addMark(docStart, docEnd, mark);
+        }
+      } catch (error) {
+        console.warn(`Error highlighting match ${i}:`, error);
+      }
+    }
+
+    // Dispatch the transaction if there are changes
+    if (tr.steps.length > 0) {
+      editor.view.dispatch(tr);
+      console.log(
+        `✅ Highlighted ${matches.length} matches (current: ${
+          currentIndex + 1
+        })`
+      );
+    }
+  };
+
+  // Scroll to a specific match position and highlight it
+  const scrollToMatch = (from: number, to: number) => {
+    if (!editor) return;
+
+    const { state } = editor.view;
+    const docSize = state.doc.content.size;
+    const safeFrom = Math.min(Math.max(0, from), docSize);
+    const safeTo = Math.min(Math.max(safeFrom, to), docSize);
+
+    // Set selection to highlight the match (this will visually highlight it)
+    editor.commands.setTextSelection({ from: safeFrom, to: safeTo });
+
+    // Scroll into view
+    setTimeout(() => {
+      try {
+        const domPos = editor.view.domAtPos(safeFrom);
+        if (domPos.node) {
+          const element =
+            domPos.node instanceof HTMLElement
+              ? domPos.node
+              : domPos.node.parentElement;
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }
+      } catch (error) {
+        // Fallback: scroll the editor container
+        const editorElement = editorContentRef.current;
+        if (editorElement) {
+          editorElement.scrollTop =
+            editorElement.scrollHeight * (safeFrom / docSize);
+        }
+      }
+    }, 50);
+  };
+
+  // Navigate to next match
+  const goToNextMatch = () => {
+    if (searchMatches.length === 0) return;
+    const nextIndex = (currentMatchIndex + 1) % searchMatches.length;
+    setCurrentMatchIndex(nextIndex);
+    highlightAllMatches(searchMatches, nextIndex);
+    const match = searchMatches[nextIndex];
+    scrollToMatch(match.start, match.end);
+  };
+
+  // Navigate to previous match
+  const goToPreviousMatch = () => {
+    if (searchMatches.length === 0) return;
+    const prevIndex =
+      currentMatchIndex <= 0 ? searchMatches.length - 1 : currentMatchIndex - 1;
+    setCurrentMatchIndex(prevIndex);
+    highlightAllMatches(searchMatches, prevIndex);
+    const match = searchMatches[prevIndex];
+    scrollToMatch(match.start, match.end);
+  };
+
   if (!editor) {
     return (
       <div className="flex-1 flex items-center justify-center text-[var(--text-secondary)]">
@@ -445,7 +711,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
       {editable && (
         <div className="flex items-center gap-1 px-3 py-2.5 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)] flex-wrap">
           {/* Text Formatting */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBold().run()}
               isActive={editor.isActive("bold")}
@@ -486,7 +752,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
               isActive={editor.isActive("highlight")}
               title="Highlight"
             >
-              <span className="bg-yellow-400 text-black px-1 rounded text-xs">
+              <span className="px-1 text-xs text-black bg-yellow-400 rounded">
                 H
               </span>
             </ToolbarButton>
@@ -509,7 +775,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           <ToolbarSeparator />
 
           {/* Headings */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <ToolbarButton
               onClick={() =>
                 editor.chain().focus().toggleHeading({ level: 1 }).run()
@@ -549,7 +815,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           <ToolbarSeparator />
 
           {/* Lists */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               isActive={editor.isActive("bulletList")}
@@ -576,7 +842,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           <ToolbarSeparator />
 
           {/* Text Alignment */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <ToolbarButton
               onClick={() => editor.chain().focus().setTextAlign("left").run()}
               isActive={editor.isActive({ textAlign: "left" })}
@@ -666,7 +932,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           <ToolbarSeparator />
 
           {/* Block Elements */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <ToolbarButton
               onClick={() => editor.chain().focus().toggleCodeBlock().run()}
               isActive={editor.isActive("codeBlock")}
@@ -692,7 +958,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           <ToolbarSeparator />
 
           {/* Links & Media */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <ToolbarButton
               onClick={handleAddLink}
               isActive={editor.isActive("link")}
@@ -781,7 +1047,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           {/* Table Controls (only show when in table) */}
           {editor.isActive("table") && (
             <>
-              <div className="flex items-center gap-1">
+              <div className="flex gap-1 items-center">
                 <ToolbarButton
                   onClick={() => editor.chain().focus().addColumnBefore().run()}
                   title="Add Column Before"
@@ -845,7 +1111,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           )}
 
           {/* Color Picker */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <input
               type="color"
               onChange={(e) =>
@@ -873,7 +1139,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
           <ToolbarSeparator />
 
           {/* Undo/Redo */}
-          <div className="flex items-center gap-1">
+          <div className="flex gap-1 items-center">
             <ToolbarButton
               onClick={() => editor.chain().focus().undo().run()}
               disabled={!editor.can().undo()}
@@ -923,7 +1189,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
       {/* Link Dialog */}
       {showLinkDialog && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-xl p-4 min-w-[400px]">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex gap-2 items-center mb-3">
             <label className="text-sm text-[var(--text-primary)]">
               Link URL:
             </label>
@@ -943,7 +1209,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
               autoFocus
             />
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex gap-2 justify-end items-center">
             <button
               onClick={() => setShowLinkDialog(false)}
               className="px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
@@ -974,7 +1240,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
       {/* Image Dialog */}
       {showImageDialog && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-xl p-4 min-w-[400px]">
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex gap-2 items-center mb-3">
             <label className="text-sm text-[var(--text-primary)]">
               Image URL:
             </label>
@@ -994,7 +1260,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
               autoFocus
             />
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex gap-2 justify-end items-center">
             <button
               onClick={() => setShowImageDialog(false)}
               className="px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
@@ -1011,8 +1277,152 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
         </div>
       )}
 
+      {/* Search Bar */}
+      {isSearchOpen && (
+        <div className="absolute top-0 right-0 z-50 bg-[var(--bg-secondary)] border-b border-l border-[var(--border-primary)] rounded-bl-lg shadow-xl">
+          <div className="flex gap-2 items-center px-3 py-2">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="w-4 h-4 text-[var(--text-secondary)] flex-shrink-0"
+            >
+              <path
+                d="M7 12C9.76142 12 12 9.76142 12 7C12 4.23858 9.76142 2 7 2C4.23858 2 2 4.23858 2 7C2 9.76142 4.23858 12 7 12Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M10 10L14 14"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  goToNextMatch();
+                } else if (e.key === "Enter" && e.shiftKey) {
+                  e.preventDefault();
+                  goToPreviousMatch();
+                } else if (e.key === "Escape") {
+                  setIsSearchOpen(false);
+                  setSearchTerm("");
+                  setSearchMatches([]);
+                  setCurrentMatchIndex(-1);
+                  editor?.commands.focus();
+                }
+              }}
+              placeholder="Search..."
+              className="w-64 px-2 py-1.5 bg-[var(--bg-primary)] border border-[var(--border-primary)] rounded text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+              autoFocus
+            />
+            <div className="flex gap-1 items-center">
+              <button
+                onClick={() => setCaseSensitive(!caseSensitive)}
+                className={`px-2 py-1 rounded text-xs transition-colors ${
+                  caseSensitive
+                    ? "text-white bg-[var(--accent-primary)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)]"
+                }`}
+                title="Case sensitive"
+              >
+                Aa
+              </button>
+              <button
+                onClick={goToPreviousMatch}
+                disabled={searchMatches.length === 0}
+                className="px-2 py-1 rounded text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Previous match (Shift+Enter)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  className="w-4 h-4"
+                >
+                  <path
+                    d="M10 12L6 8L10 4"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={goToNextMatch}
+                disabled={searchMatches.length === 0}
+                className="px-2 py-1 rounded text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Next match (Enter)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  className="w-4 h-4"
+                >
+                  <path
+                    d="M6 4L10 8L6 12"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              {searchMatches.length > 0 && (
+                <span className="px-2 py-1 text-xs text-[var(--text-secondary)] whitespace-nowrap">
+                  {currentMatchIndex + 1} / {searchMatches.length}
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setIsSearchOpen(false);
+                  setSearchTerm("");
+                  setSearchMatches([]);
+                  setCurrentMatchIndex(-1);
+                  clearSearchHighlights();
+                  editor?.commands.focus();
+                }}
+                className="px-2 py-1 rounded text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                title="Close (Esc)"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  className="w-4 h-4"
+                >
+                  <path
+                    d="M12 4L4 12M4 4L12 12"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Editor Content with Line Numbers */}
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex overflow-hidden flex-1">
         {/* Line Numbers Gutter */}
         <div
           ref={lineNumbersRef}
@@ -1055,7 +1465,7 @@ export const Editor = forwardRef<any, EditorProps>(function Editor(
         {/* Editor Content Area */}
         <div
           ref={editorContentRef}
-          className="flex-1 overflow-y-auto overflow-x-auto relative"
+          className="overflow-x-auto overflow-y-auto relative flex-1"
           onScroll={(e) => {
             // Sync line numbers scroll with editor scroll
             const lineNumbersContent = lineNumbersRef.current?.querySelector(

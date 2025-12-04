@@ -190,6 +190,28 @@
   outline-offset: 2px;
 }
 
+/* Search Highlight Styles - Yellow for regular matches */
+.ProseMirror mark[style*="background-color: rgb(255, 255, 0)"],
+.ProseMirror mark[style*="background-color:#ffff00"],
+.ProseMirror mark[style*="background-color: #ffff00"] {
+  background-color: rgba(255, 255, 0, 0.5) !important;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.125rem;
+  color: inherit;
+}
+
+/* Search Highlight Styles - Orange for current match */
+.ProseMirror mark[style*="background-color: rgb(255, 165, 0)"],
+.ProseMirror mark[style*="background-color:#ffa500"],
+.ProseMirror mark[style*="background-color: #ffa500"] {
+  background-color: rgba(255, 165, 0, 0.8) !important;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.125rem;
+  box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.9);
+  color: inherit;
+  font-weight: 500;
+}
+
 /* Task List Styles */
 .ProseMirror .editor-task-list {
   list-style: none;
