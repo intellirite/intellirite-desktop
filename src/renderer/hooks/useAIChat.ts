@@ -70,6 +70,12 @@ export function useAIChat() {
                 return null;
             }
 
+            // Ensure content is a string
+            if (typeof content !== 'string') {
+                console.error('File content is not a string:', typeof content);
+                return null;
+            }
+
             // Smart chunking: Get first 60 lines
             const lines = content.split('\n');
             const CHUNK_SIZE = 60;

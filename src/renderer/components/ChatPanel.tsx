@@ -8,12 +8,16 @@ import {
 import ReactMarkdown from "react-markdown";
 import { useAIChat } from "../hooks/useAIChat";
 import type { Editor } from "@tiptap/react";
+import { PatchPreview, type Patch } from "./PatchPreview";
+import { parseAIResponse, applyPatch, applyPatches } from "../utils/patchParser";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
+  patches?: Patch[];
+  hasPatches?: boolean;
 }
 
 interface ChatPanelProps {
@@ -67,6 +71,19 @@ export function ChatPanel({
   
   // AI Chat hook for context awareness
   const { sendAIMessage, extractFileReferences } = useAIChat();
+  
+  // Get current file content from editor
+  const currentFileContent = editor ? (editor.getText ? editor.getText() : editor.state?.doc?.textContent || '') : '';
+  
+  // Debug: Log when content changes
+  useEffect(() => {
+    console.log('📝 ChatPanel context updated:', {
+      hasEditor: !!editor,
+      contentLength: currentFileContent?.length || 0,
+      fileName: currentFileName,
+      filePath: currentFilePath
+    });
+  }, [editor, currentFileContent, currentFileName, currentFilePath]);
   
   // Update context files indicator when props change
   useEffect(() => {
@@ -139,6 +156,127 @@ export function ChatPanel({
     return date.toLocaleDateString();
   };
 
+  // Handle accepting a patch
+  const handleAcceptPatch = async (patch: Patch) => {
+    console.log('🔧 Applying patch:', patch);
+    
+    if (!editor) {
+      console.error('❌ Cannot apply patch: no editor instance');
+      alert('Editor not available. Please try again.');
+      return;
+    }
+
+    try {
+      // Get current content from editor
+      let currentContent = '';
+      
+      // Try multiple methods to get content
+      if (typeof editor.getText === 'function') {
+        currentContent = editor.getText();
+      } else if (typeof editor.getHTML === 'function') {
+        // Convert HTML to text if needed
+        const html = editor.getHTML();
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        currentContent = tempDiv.textContent || '';
+      } else if (editor.state?.doc) {
+        currentContent = editor.state.doc.textContent || '';
+      }
+      
+      console.log('📄 Current content length:', currentContent.length);
+      console.log('📝 First 100 chars:', currentContent.substring(0, 100));
+      
+      if (!currentContent) {
+        console.warn('⚠️ Editor content is empty, using empty string');
+        currentContent = '';
+      }
+      
+      // Apply the patch
+      const newContent = applyPatch(currentContent, patch);
+      
+      console.log('✨ New content length:', newContent.length);
+      console.log('📝 First 100 chars:', newContent.substring(0, 100));
+      
+      // Update editor - use commands API for TipTap
+      if (editor.commands) {
+        // Clear and set new content
+        editor.commands.setContent(newContent);
+        console.log('✅ Patch applied via TipTap commands');
+      } else if (onReplaceInEditor) {
+        // Fallback to parent handler
+        onReplaceInEditor(newContent);
+        console.log('✅ Patch applied via replace handler');
+      } else {
+        console.error('❌ No method to update editor');
+        alert('Cannot update editor. Please try manually copying the content.');
+        return;
+      }
+      
+      // Show success message
+      console.log('✅ Patch applied successfully!');
+      
+      // Optional: Show a brief success indicator
+      // You could add a toast notification here
+      
+    } catch (error) {
+      console.error('❌ Error applying patch:', error);
+      alert(`Failed to apply patch: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Handle rejecting a patch
+  const handleRejectPatch = (patch: Patch) => {
+    console.log('❌ Patch rejected:', patch);
+    // Optionally, remove the patch from the message
+  };
+
+  // Handle accepting all patches
+  const handleAcceptAllPatches = async (patches: Patch[]) => {
+    console.log('🔧 Applying all patches:', patches.length);
+    
+    if (!editor) {
+      console.error('❌ Cannot apply patches: no editor instance');
+      alert('Editor not available. Please try again.');
+      return;
+    }
+
+    try {
+      // Get current content from editor
+      let currentContent = '';
+      
+      if (typeof editor.getText === 'function') {
+        currentContent = editor.getText();
+      } else if (editor.state?.doc) {
+        currentContent = editor.state.doc.textContent || '';
+      }
+      
+      console.log('📄 Current content length:', currentContent.length);
+      
+      // Apply all patches in sequence
+      const newContent = applyPatches(currentContent, patches);
+      
+      console.log('✨ New content length:', newContent.length);
+      
+      // Update editor
+      if (editor.commands) {
+        editor.commands.setContent(newContent);
+        console.log(`✅ Applied ${patches.length} patches via TipTap commands`);
+      } else if (onReplaceInEditor) {
+        onReplaceInEditor(newContent);
+        console.log(`✅ Applied ${patches.length} patches via replace handler`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error applying patches:', error);
+      alert(`Failed to apply patches: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Handle rejecting all patches
+  const handleRejectAllPatches = (patches: Patch[]) => {
+    console.log(`❌ Rejected ${patches.length} patches`);
+  };
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
 
@@ -195,6 +333,23 @@ export function ChatPanel({
           )
         );
       }
+
+      // Parse response for patches after streaming completes
+      const { hasPatches, patches, textContent } = parseAIResponse(fullResponse);
+      
+      // Update message with parsed patches
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === assistantMessageId
+            ? { 
+                ...msg, 
+                content: textContent || fullResponse,
+                hasPatches,
+                patches
+              }
+            : msg
+        )
+      );
     } catch (error: any) {
       console.error("Error getting AI response:", error);
 
@@ -262,6 +417,12 @@ export function ChatPanel({
             formatTime={formatTime}
             onInsert={onInsertToEditor}
             onReplace={onReplaceInEditor}
+            currentFileContent={currentFileContent}
+            currentFileName={currentFileName}
+            onAcceptPatch={handleAcceptPatch}
+            onRejectPatch={handleRejectPatch}
+            onAcceptAllPatches={handleAcceptAllPatches}
+            onRejectAllPatches={handleRejectAllPatches}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -582,6 +743,12 @@ interface MessageBubbleProps {
   formatTime: (date: Date) => string;
   onInsert?: (content: string) => void;
   onReplace?: (content: string) => void;
+  currentFileContent?: string;
+  currentFileName?: string;
+  onAcceptPatch?: (patch: Patch) => void;
+  onRejectPatch?: (patch: Patch) => void;
+  onAcceptAllPatches?: (patches: Patch[]) => void;
+  onRejectAllPatches?: (patches: Patch[]) => void;
 }
 
 /**
@@ -592,6 +759,12 @@ function MessageBubble({
   formatTime,
   onInsert,
   onReplace,
+  currentFileContent,
+  currentFileName,
+  onAcceptPatch,
+  onRejectPatch,
+  onAcceptAllPatches,
+  onRejectAllPatches,
 }: MessageBubbleProps) {
   const [showActions, setShowActions] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -617,7 +790,29 @@ function MessageBubble({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      {/* Message Bubble */}
+      {/* Patches Preview (if any) - Show BEFORE the message bubble */}
+      {!isUser && message.hasPatches && message.patches && message.patches.length > 0 && (
+        <div className="w-full mb-3">
+          {console.log('🎨 About to render PatchPreview:', {
+            patchCount: message.patches.length,
+            hasContent: !!currentFileContent,
+            contentLength: currentFileContent?.length || 0,
+            fileName: currentFileName
+          })}
+          <PatchPreview
+            patches={message.patches}
+            currentFileContent={currentFileContent || ''}
+            currentFileName={currentFileName || 'file'}
+            onAcceptPatch={onAcceptPatch!}
+            onRejectPatch={onRejectPatch!}
+            onAcceptAll={() => onAcceptAllPatches!(message.patches!)}
+            onRejectAll={() => onRejectAllPatches!(message.patches!)}
+          />
+        </div>
+      )}
+
+      {/* Message Bubble - Only show text content, not the raw patch XML */}
+      {message.content && message.content.trim().length > 0 && (
       <div
         className={`
           relative max-w-[85%] rounded-lg px-3 py-2
@@ -759,11 +954,16 @@ function MessageBubble({
           </div>
         )}
       </div>
+      )}
 
       {/* Timestamp */}
-      <span className="text-xs text-[var(--text-tertiary)] mt-1 px-1">
+      <div
+        className={`text-[10px] mt-1 ${
+          isUser ? "text-white/70" : "text-[var(--text-tertiary)]"
+        }`}
+      >
         {formatTime(message.timestamp)}
-      </span>
+      </div>
     </div>
   );
 }

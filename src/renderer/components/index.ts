@@ -11,6 +11,8 @@ export { StatusBar, type CursorPosition, type StatusBarProps } from './StatusBar
 export { CommandPalette, type Command } from './CommandPalette'
 export { SettingsModal } from './SettingsModal'
 export { InputDialog } from './InputDialog'
+export { DiffViewer } from './DiffViewer'
+export { PatchPreview, type Patch } from './PatchPreview'
 export * from './Icons'
 
 

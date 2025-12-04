@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState } from "react";
 
 interface DiffLine {
   lineNumber?: number;
-  type: 'unchanged' | 'added' | 'removed' | 'context';
+  type: "unchanged" | "added" | "removed" | "context";
   content: string;
 }
 
@@ -31,76 +31,82 @@ export function DiffViewer({
   startLine = 1,
   endLine,
 }: DiffViewerProps) {
-  const [viewMode, setViewMode] = useState<'unified' | 'split'>('unified');
+  const [viewMode, setViewMode] = useState<"unified" | "split">("unified");
 
   // Generate diff lines
   const diffLines = generateDiff(originalContent, modifiedContent, startLine);
 
   return (
-    <div className="diff-viewer border border-[var(--border-primary)] rounded-lg overflow-hidden bg-[var(--bg-secondary)]">
-      {/* Header */}
-      <div className="diff-header flex items-center justify-between px-4 py-2 bg-[var(--bg-primary)] border-b border-[var(--border-primary)]">
-        <div className="flex items-center gap-2">
-          {fileName && (
-            <span className="text-sm font-medium text-[var(--text-primary)]">
-              📄 {fileName}
-            </span>
-          )}
-          {startLine && endLine && (
-            <span className="text-xs text-[var(--text-tertiary)]">
-              Lines {startLine}-{endLine}
-            </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="flex items-center gap-1 bg-[var(--bg-secondary)] rounded p-1">
-            <button
-              onClick={() => setViewMode('unified')}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                viewMode === 'unified'
-                  ? 'bg-[var(--accent-primary)] text-white'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              Unified
-            </button>
-            <button
-              onClick={() => setViewMode('split')}
-              className={`px-2 py-1 text-xs rounded transition-colors ${
-                viewMode === 'split'
-                  ? 'bg-[var(--accent-primary)] text-white'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              Split
-            </button>
+    <div className="diff-viewer border-2 border-[var(--border-primary)] rounded-xl overflow-hidden bg-[var(--bg-secondary)] shadow-lg">
+      {/* Header - Two rows for better layout */}
+      <div className="diff-header bg-gradient-to-r from-[var(--bg-primary)] to-[var(--bg-secondary)] border-b-2 border-[var(--border-primary)]">
+        {/* Row 1: File info and actions */}
+        <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-primary)]/50">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {fileName && (
+              <>
+                <span className="text-lg">📄</span>
+                <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
+                  {fileName}
+                </span>
+              </>
+            )}
+            {startLine && endLine && (
+              <span className="px-2 py-0.5 text-xs font-medium bg-[var(--bg-hover)] text-[var(--text-secondary)] rounded-full whitespace-nowrap">
+                Lines {startLine}-{endLine}
+              </span>
+            )}
           </div>
 
-          {/* Actions */}
+          {/* Actions - Always visible */}
           {showActions && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
               <button
                 onClick={onReject}
-                className="px-3 py-1 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg transition-all whitespace-nowrap"
               >
-                Reject
+                ✕ Reject
               </button>
               <button
                 onClick={onAccept}
-                className="px-3 py-1 text-xs font-medium bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white rounded transition-colors"
+                className="px-3 py-1.5 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all whitespace-nowrap"
               >
-                Accept
+                ✓ Accept
               </button>
             </div>
           )}
         </div>
+
+        {/* Row 2: View mode toggle */}
+        <div className="flex items-center justify-center px-4 py-2">
+          <div className="flex items-center gap-1 bg-[var(--bg-primary)] rounded-lg p-1 border border-[var(--border-primary)]">
+            <button
+              onClick={() => setViewMode("unified")}
+              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                viewMode === "unified"
+                  ? "bg-[var(--accent-primary)] text-white shadow-sm"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+              }`}
+            >
+              📝 Unified
+            </button>
+            <button
+              onClick={() => setViewMode("split")}
+              className={`px-4 py-1.5 text-xs font-medium rounded-md transition-all ${
+                viewMode === "split"
+                  ? "bg-[var(--accent-primary)] text-white shadow-sm"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+              }`}
+            >
+              📊 Split
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Diff Content */}
-      <div className="diff-content overflow-auto max-h-[400px]">
-        {viewMode === 'unified' ? (
+      <div className="diff-content overflow-auto max-h-[500px] bg-[var(--bg-primary)]">
+        {viewMode === "unified" ? (
           <UnifiedDiffView lines={diffLines} />
         ) : (
           <SplitDiffView
@@ -109,6 +115,23 @@ export function DiffViewer({
             startLine={startLine}
           />
         )}
+      </div>
+
+      {/* Footer with quick stats */}
+      <div className="diff-footer px-4 py-2 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] text-xs text-[var(--text-tertiary)] flex items-center gap-3">
+        <span className="flex items-center gap-1">
+          <span className="text-green-600 font-semibold">
+            +{diffLines.filter((l) => l.type === "added").length}
+          </span>
+          <span>additions</span>
+        </span>
+        <span className="text-[var(--border-primary)]">•</span>
+        <span className="flex items-center gap-1">
+          <span className="text-red-600 font-semibold">
+            -{diffLines.filter((l) => l.type === "removed").length}
+          </span>
+          <span>deletions</span>
+        </span>
       </div>
     </div>
   );
@@ -119,26 +142,34 @@ export function DiffViewer({
  */
 function UnifiedDiffView({ lines }: { lines: DiffLine[] }) {
   return (
-    <div className="unified-diff font-mono text-xs">
+    <div className="unified-diff font-mono text-xs leading-relaxed">
       {lines.map((line, index) => (
         <div
           key={index}
-          className={`diff-line flex ${
-            line.type === 'added'
-              ? 'bg-green-500/10 text-green-600'
-              : line.type === 'removed'
-              ? 'bg-red-500/10 text-red-600'
-              : 'text-[var(--text-primary)]'
-          }`}
+          className={`diff-line flex border-l-4 ${
+            line.type === "added"
+              ? "bg-green-500/10 border-green-500 text-green-700 dark:text-green-400"
+              : line.type === "removed"
+              ? "bg-red-500/10 border-red-500 text-red-700 dark:text-red-400"
+              : "border-transparent text-[var(--text-primary)] hover:bg-[var(--bg-hover)]"
+          } transition-colors`}
         >
-          <div className="line-number w-12 flex-shrink-0 px-2 py-1 text-right text-[var(--text-tertiary)] select-none">
-            {line.lineNumber || ''}
+          <div className="line-number w-14 flex-shrink-0 px-3 py-2 text-right text-[var(--text-tertiary)] select-none font-medium bg-[var(--bg-primary)]/50">
+            {line.lineNumber || ""}
           </div>
-          <div className="line-marker w-6 flex-shrink-0 px-1 py-1 font-bold select-none">
-            {line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' '}
+          <div
+            className={`line-marker w-8 flex-shrink-0 px-2 py-2 font-bold select-none text-center ${
+              line.type === "added"
+                ? "text-green-600"
+                : line.type === "removed"
+                ? "text-red-600"
+                : "text-[var(--text-tertiary)]"
+            }`}
+          >
+            {line.type === "added" ? "+" : line.type === "removed" ? "-" : ""}
           </div>
-          <div className="line-content flex-1 px-2 py-1 whitespace-pre overflow-x-auto">
-            {line.content}
+          <div className="line-content flex-1 px-3 py-2 whitespace-pre overflow-x-auto">
+            {line.content || " "}
           </div>
         </div>
       ))}
@@ -158,24 +189,28 @@ function SplitDiffView({
   modifiedContent: string;
   startLine: number;
 }) {
-  const originalLines = originalContent.split('\n');
-  const modifiedLines = modifiedContent.split('\n');
+  const originalLines = originalContent.split("\n");
+  const modifiedLines = modifiedContent.split("\n");
   const maxLines = Math.max(originalLines.length, modifiedLines.length);
 
   return (
-    <div className="split-diff grid grid-cols-2 gap-0 font-mono text-xs">
+    <div className="split-diff grid grid-cols-2 gap-0 font-mono text-xs leading-relaxed">
       {/* Original (left) */}
-      <div className="original border-r border-[var(--border-primary)]">
-        <div className="header px-4 py-1 bg-red-500/10 text-red-600 font-medium text-xs border-b border-[var(--border-primary)]">
-          Original
+      <div className="original border-r-2 border-[var(--border-primary)]">
+        <div className="header px-4 py-2 bg-red-500/20 text-red-700 dark:text-red-400 font-semibold text-xs border-b-2 border-red-300 dark:border-red-900 flex items-center gap-2">
+          <span className="text-base">−</span>
+          <span>Original</span>
         </div>
         {originalLines.map((line, index) => (
-          <div key={index} className="diff-line flex bg-red-500/5">
-            <div className="line-number w-12 flex-shrink-0 px-2 py-1 text-right text-[var(--text-tertiary)] select-none">
+          <div
+            key={index}
+            className="diff-line flex bg-red-500/5 hover:bg-red-500/15 transition-colors border-l-4 border-red-400"
+          >
+            <div className="line-number w-14 flex-shrink-0 px-3 py-2 text-right text-[var(--text-tertiary)] select-none font-medium bg-[var(--bg-primary)]/30">
               {startLine + index}
             </div>
-            <div className="line-content flex-1 px-2 py-1 whitespace-pre overflow-x-auto text-[var(--text-primary)]">
-              {line}
+            <div className="line-content flex-1 px-3 py-2 whitespace-pre overflow-x-auto text-red-800 dark:text-red-300">
+              {line || " "}
             </div>
           </div>
         ))}
@@ -183,16 +218,20 @@ function SplitDiffView({
 
       {/* Modified (right) */}
       <div className="modified">
-        <div className="header px-4 py-1 bg-green-500/10 text-green-600 font-medium text-xs border-b border-[var(--border-primary)]">
-          Modified
+        <div className="header px-4 py-2 bg-green-500/20 text-green-700 dark:text-green-400 font-semibold text-xs border-b-2 border-green-300 dark:border-green-900 flex items-center gap-2">
+          <span className="text-base">+</span>
+          <span>Modified</span>
         </div>
         {modifiedLines.map((line, index) => (
-          <div key={index} className="diff-line flex bg-green-500/5">
-            <div className="line-number w-12 flex-shrink-0 px-2 py-1 text-right text-[var(--text-tertiary)] select-none">
+          <div
+            key={index}
+            className="diff-line flex bg-green-500/5 hover:bg-green-500/15 transition-colors border-l-4 border-green-400"
+          >
+            <div className="line-number w-14 flex-shrink-0 px-3 py-2 text-right text-[var(--text-tertiary)] select-none font-medium bg-[var(--bg-primary)]/30">
               {startLine + index}
             </div>
-            <div className="line-content flex-1 px-2 py-1 whitespace-pre overflow-x-auto text-[var(--text-primary)]">
-              {line}
+            <div className="line-content flex-1 px-3 py-2 whitespace-pre overflow-x-auto text-green-800 dark:text-green-300">
+              {line || " "}
             </div>
           </div>
         ))}
@@ -209,15 +248,15 @@ function generateDiff(
   modified: string,
   startLine: number = 1
 ): DiffLine[] {
-  const originalLines = original.split('\n');
-  const modifiedLines = modified.split('\n');
+  const originalLines = original.split("\n");
+  const modifiedLines = modified.split("\n");
   const diffLines: DiffLine[] = [];
 
   // Simple line-by-line diff (can be enhanced with proper diff algorithm)
   const maxLength = Math.max(originalLines.length, modifiedLines.length);
-  
+
   let lineNumber = startLine;
-  
+
   for (let i = 0; i < maxLength; i++) {
     const origLine = originalLines[i];
     const modLine = modifiedLines[i];
@@ -226,22 +265,22 @@ function generateDiff(
       // Unchanged line
       diffLines.push({
         lineNumber: lineNumber++,
-        type: 'unchanged',
-        content: origLine || '',
+        type: "unchanged",
+        content: origLine || "",
       });
     } else {
       // Changed line - show both removed and added
       if (origLine !== undefined) {
         diffLines.push({
           lineNumber: lineNumber,
-          type: 'removed',
+          type: "removed",
           content: origLine,
         });
       }
       if (modLine !== undefined) {
         diffLines.push({
           lineNumber: lineNumber,
-          type: 'added',
+          type: "added",
           content: modLine,
         });
       }
@@ -251,4 +290,3 @@ function generateDiff(
 
   return diffLines;
 }
-

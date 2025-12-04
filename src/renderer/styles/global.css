@@ -595,3 +595,93 @@ a:hover {
     -webkit-app-region: no-drag;
   }
 }
+
+/* Diff Viewer Styles */
+.diff-viewer {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  transition: all 0.2s ease;
+}
+
+.diff-viewer:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.diff-line {
+  transition: all 0.15s ease;
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.diff-line:hover {
+  filter: brightness(1.05);
+}
+
+.line-number {
+  font-variant-numeric: tabular-nums;
+}
+
+.line-content {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  tab-size: 4;
+}
+
+/* Patch Preview Styles */
+.patch-preview {
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.patch-item {
+  animation: fadeIn 0.2s ease-out;
+  transition: all 0.2s ease;
+}
+
+.patch-item:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Accept/Reject Button Animations */
+button:active {
+  transform: scale(0.95);
+}
+
+/* Smooth transitions for all interactive elements */
+.transition-all {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}

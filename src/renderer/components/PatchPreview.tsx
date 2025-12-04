@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { DiffViewer } from './DiffViewer';
+import { useState } from "react";
+import { DiffViewer } from "./DiffViewer";
 
 export interface Patch {
   file: string;
-  type: 'insert' | 'replace' | 'delete';
+  type: "insert" | "replace" | "delete";
   line?: number;
   target?: {
     startLine: number;
@@ -36,6 +36,12 @@ export function PatchPreview({
   onAcceptAll,
   onRejectAll,
 }: PatchPreviewProps) {
+  console.log("🎨 PatchPreview rendering:", {
+    patchCount: patches.length,
+    currentFileName,
+    hasContent: !!currentFileContent,
+  });
+
   const [expandedPatches, setExpandedPatches] = useState<Set<number>>(
     new Set(patches.map((_, i) => i))
   );
@@ -53,32 +59,42 @@ export function PatchPreview({
   };
 
   if (patches.length === 0) {
+    console.log("⚠️ PatchPreview: No patches to display");
     return null;
   }
 
   return (
-    <div className="patch-preview space-y-3">
+    <div className="patch-preview space-y-3 animate-fadeIn">
       {/* Header with bulk actions */}
       {patches.length > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-[var(--text-primary)]">
-              🔧 {patches.length} change{patches.length > 1 ? 's' : ''} suggested
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onRejectAll}
-              className="px-3 py-1 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] rounded transition-colors"
-            >
-              Reject All
-            </button>
-            <button
-              onClick={onAcceptAll}
-              className="px-3 py-1 text-xs font-medium bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-white rounded transition-colors"
-            >
-              Accept All
-            </button>
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border-2 border-blue-200 dark:border-blue-900 rounded-xl shadow-sm overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🔧</span>
+              <div>
+                <div className="text-sm font-bold text-[var(--text-primary)]">
+                  {patches.length} Change{patches.length > 1 ? "s" : ""}{" "}
+                  Suggested
+                </div>
+                <div className="text-xs text-[var(--text-tertiary)]">
+                  Review and apply changes to your file
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={onRejectAll}
+                className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30 border-2 border-red-200 dark:border-red-900 rounded-lg transition-all whitespace-nowrap"
+              >
+                ✕ Reject All
+              </button>
+              <button
+                onClick={onAcceptAll}
+                className="px-3 py-1.5 text-xs font-semibold bg-green-600 hover:bg-green-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all whitespace-nowrap"
+              >
+                ✓ Accept All
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -92,38 +108,52 @@ export function PatchPreview({
         );
 
         return (
-          <div key={index} className="patch-item">
+          <div
+            key={index}
+            className="patch-item rounded-xl border-2 border-[var(--border-primary)] overflow-hidden shadow-md hover:shadow-lg transition-all"
+          >
             {/* Patch header */}
             <div
-              className="flex items-center justify-between px-3 py-2 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-t-lg cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"
+              className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-[var(--bg-secondary)] to-[var(--bg-primary)] border-b-2 border-[var(--border-primary)] cursor-pointer hover:bg-[var(--bg-hover)] transition-all"
               onClick={() => togglePatch(index)}
             >
-              <div className="flex items-center gap-2">
-                <span className="text-sm">
-                  {isExpanded ? '▼' : '▶'}
+              <div className="flex items-center gap-3">
+                <span
+                  className="text-lg transition-transform"
+                  style={{
+                    transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                  }}
+                >
+                  ▶
                 </span>
-                <span className="text-sm font-medium text-[var(--text-primary)]">
+                <span className="text-sm font-bold text-[var(--text-primary)]">
                   {getPatchTypeLabel(patch.type)}
-                  {startLine && endLine && (
-                    <span className="text-xs text-[var(--text-tertiary)] ml-2">
-                      Lines {startLine}-{endLine}
-                    </span>
-                  )}
                 </span>
+                {startLine && endLine && (
+                  <span className="px-2 py-0.5 text-xs font-medium bg-[var(--bg-hover)] text-[var(--text-secondary)] rounded-full">
+                    Lines {startLine}-{endLine}
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Patch content */}
             {isExpanded && (
-              <div className="border-x border-b border-[var(--border-primary)] rounded-b-lg overflow-hidden">
+              <div className="overflow-hidden">
                 <DiffViewer
                   originalContent={original}
                   modifiedContent={modified}
                   fileName={currentFileName}
                   startLine={startLine}
                   endLine={endLine}
-                  onAccept={() => onAcceptPatch(patch)}
-                  onReject={() => onRejectPatch(patch)}
+                  onAccept={() => {
+                    console.log("🎯 Accept button clicked for patch:", patch);
+                    onAcceptPatch(patch);
+                  }}
+                  onReject={() => {
+                    console.log("🚫 Reject button clicked for patch:", patch);
+                    onRejectPatch(patch);
+                  }}
                   showActions={true}
                 />
               </div>
@@ -147,22 +177,22 @@ function extractPatchContent(
   startLine: number;
   endLine: number;
 } {
-  const lines = fileContent.split('\n');
+  const lines = fileContent.split("\n");
 
   switch (patch.type) {
-    case 'replace': {
+    case "replace": {
       if (!patch.target) {
         return {
-          original: '',
-          modified: patch.replacement || '',
+          original: "",
+          modified: patch.replacement || "",
           startLine: 1,
           endLine: 1,
         };
       }
 
       const { startLine, endLine } = patch.target;
-      const original = lines.slice(startLine - 1, endLine).join('\n');
-      const modified = patch.replacement || '';
+      const original = lines.slice(startLine - 1, endLine).join("\n");
+      const modified = patch.replacement || "";
 
       return {
         original,
@@ -172,32 +202,32 @@ function extractPatchContent(
       };
     }
 
-    case 'insert': {
+    case "insert": {
       const lineNum = patch.line || 1;
       return {
-        original: '',
-        modified: patch.content || '',
+        original: "",
+        modified: patch.content || "",
         startLine: lineNum,
         endLine: lineNum,
       };
     }
 
-    case 'delete': {
+    case "delete": {
       if (!patch.target) {
         return {
-          original: '',
-          modified: '',
+          original: "",
+          modified: "",
           startLine: 1,
           endLine: 1,
         };
       }
 
       const { startLine, endLine } = patch.target;
-      const original = lines.slice(startLine - 1, endLine).join('\n');
+      const original = lines.slice(startLine - 1, endLine).join("\n");
 
       return {
         original,
-        modified: '',
+        modified: "",
         startLine,
         endLine,
       };
@@ -205,8 +235,8 @@ function extractPatchContent(
 
     default:
       return {
-        original: '',
-        modified: '',
+        original: "",
+        modified: "",
         startLine: 1,
         endLine: 1,
       };
@@ -216,16 +246,15 @@ function extractPatchContent(
 /**
  * Get human-readable label for patch type
  */
-function getPatchTypeLabel(type: Patch['type']): string {
+function getPatchTypeLabel(type: Patch["type"]): string {
   switch (type) {
-    case 'insert':
-      return '➕ Insert';
-    case 'replace':
-      return '✏️ Replace';
-    case 'delete':
-      return '🗑️ Delete';
+    case "insert":
+      return "✨ Insert Content";
+    case "replace":
+      return "✏️ Replace Text";
+    case "delete":
+      return "🗑️ Delete Lines";
     default:
-      return '📝 Change';
+      return "📝 Modify";
   }
 }
-
