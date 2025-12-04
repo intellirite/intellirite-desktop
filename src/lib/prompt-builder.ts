@@ -129,7 +129,24 @@ export class PromptBuilder {
         prompt += '- Provide explanations, suggestions, and guidance\n';
         prompt += '- Reference multiple files when mentioned with @filename\n';
         prompt += '- Be conversational, friendly, and helpful\n';
+        prompt += '- Remember recent conversation context to provide coherent responses\n';
         prompt += '\n\n';
+        
+        // Add conversation history (last 2 turns) for context awareness
+        if (context.chatHistory && context.chatHistory.length > 0) {
+            prompt += '# RECENT CONVERSATION CONTEXT\n';
+            prompt += 'Here is the recent conversation history for context:\n\n';
+            
+            context.chatHistory.forEach((msg, index) => {
+                const role = msg.role === 'user' ? 'USER' : 'ASSISTANT';
+                prompt += `## ${role}:\n`;
+                prompt += `${msg.content}\n\n`;
+            });
+            
+            prompt += '---\n\n';
+            prompt += 'Use this conversation history to provide context-aware responses. ';
+            prompt += 'Reference previous questions or answers when relevant.\n\n';
+        }
         
         // Add current file context
         prompt += `# CURRENT FILE\n`;
@@ -166,6 +183,7 @@ export class PromptBuilder {
         prompt += '# INSTRUCTIONS\n';
         prompt += '- Answer the user\'s question directly and conversationally\n';
         prompt += '- Reference specific parts of the code when relevant\n';
+        prompt += '- Use conversation history to provide context-aware responses\n';
         prompt += '- Provide code examples when helpful\n';
         prompt += '- Be concise but thorough\n';
         prompt += '- Use markdown formatting for code blocks\n';
@@ -185,7 +203,22 @@ export class PromptBuilder {
      * Build current file section
      */
     private buildCurrentFileSection(context: AIContext): string {
-        let section = `# CURRENT FILE (${context.activeFile.fileName})\n`;
+        let section = '';
+        
+        // Add conversation history (last 2 turns) for context awareness in edit mode too
+        if (context.chatHistory && context.chatHistory.length > 0) {
+            section += '# RECENT CONVERSATION CONTEXT\n';
+            section += 'Recent conversation history for context:\n\n';
+            
+            context.chatHistory.forEach((msg) => {
+                const role = msg.role === 'user' ? 'USER' : 'ASSISTANT';
+                section += `${role}: ${msg.content}\n\n`;
+            });
+            
+            section += '---\n\n';
+        }
+        
+        section += `# CURRENT FILE (${context.activeFile.fileName})\n`;
 
         // Use summary if available and file is large
         if (context.activeFile.summary && context.activeFile.lineCount > 500) {

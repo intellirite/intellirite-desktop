@@ -35,6 +35,70 @@ export interface AIMessageOptions {
 }
 
 /**
+ * Extract last N conversation turns from chat history
+ * A "turn" is a user message + assistant response pair
+ * Returns the last N turns (default: 2) in chronological order
+ */
+function getLastConversationTurns(
+    chatHistory: ChatMessage[],
+    numTurns: number = 2
+): ChatMessage[] {
+    if (chatHistory.length === 0) {
+        return [];
+    }
+
+    // Filter out system messages and keep only user/assistant
+    const validMessages = chatHistory.filter(
+        msg => msg.role === 'user' || msg.role === 'assistant'
+    );
+
+    if (validMessages.length === 0) {
+        return [];
+    }
+
+    // Build pairs: [user, assistant, user, assistant, ...]
+    // A "turn" is a user message followed by an assistant response
+    const turns: ChatMessage[][] = [];
+    let currentTurn: ChatMessage[] = [];
+
+    for (let i = 0; i < validMessages.length; i++) {
+        const msg = validMessages[i];
+        
+        if (msg.role === 'user') {
+            // Start a new turn
+            if (currentTurn.length > 0) {
+                // Save previous incomplete turn
+                turns.push([...currentTurn]);
+            }
+            currentTurn = [msg];
+        } else if (msg.role === 'assistant') {
+            // Complete the current turn
+            currentTurn.push(msg);
+            turns.push([...currentTurn]);
+            currentTurn = [];
+        }
+    }
+
+    // Add the last incomplete turn if it exists (user message without response)
+    if (currentTurn.length > 0) {
+        turns.push(currentTurn);
+    }
+
+    // Get the last N turns
+    const lastTurns = turns.slice(-numTurns);
+    
+    // Flatten into a single array of messages
+    const result: ChatMessage[] = [];
+    lastTurns.forEach(turn => {
+        turn.forEach(msg => result.push(msg));
+    });
+
+    console.log(`📚 Extracted ${lastTurns.length} conversation turn(s) (${result.length} messages)`);
+    
+    return result;
+}
+
+/**
  * Hook for AI-aware chat functionality
  */
 export function useAIChat() {
@@ -158,12 +222,16 @@ export function useAIChat() {
                 }
             }
 
-            // 3. Build context-aware prompt
+            // 3. Get last 2 conversation turns for context
+            const lastTurns = getLastConversationTurns(chatHistory, 2);
+            console.log(`💬 Including ${lastTurns.length} messages from last 2 conversation turns`);
+
+            // 4. Build context-aware prompt
             let finalPrompt = userMessage;
 
             if (activeFile) {
-                // Convert chat history to AI format
-                const aiChatHistory: AIChatMessage[] = chatHistory.map(msg => ({
+                // Convert last conversation turns to AI format
+                const aiChatHistory: AIChatMessage[] = lastTurns.map(msg => ({
                     id: msg.id,
                     role: msg.role as 'user' | 'assistant',
                     content: msg.content,
@@ -192,24 +260,19 @@ export function useAIChat() {
                 });
             }
 
-            // 4. Stream from AI
-            const chatMessages: AIChatMessage[] = chatHistory.map(msg => ({
+            // 5. Stream from AI with last 2 conversation turns as context
+            const aiChatHistoryForStreaming: AIChatMessage[] = lastTurns.map(msg => ({
                 id: msg.id,
                 role: msg.role as 'user' | 'assistant',
                 content: msg.content,
                 timestamp: msg.timestamp.getTime(),
             }));
 
-            chatMessages.push({
-                id: `${Date.now()}`,
-                role: 'user',
-                content: userMessage,
-                timestamp: Date.now(),
-            });
+            console.log(`📤 Sending to AI with ${aiChatHistoryForStreaming.length} messages of context`);
 
             for await (const chunk of aiClient.streamRequest(
                 finalPrompt,
-                chatMessages.slice(0, -1) // Don't include the latest user message since it's in the prompt
+                aiChatHistoryForStreaming // Last 2 conversation turns as context
             )) {
                 yield chunk;
             }
