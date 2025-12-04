@@ -188,7 +188,11 @@ export function TopBar({ onOpenSettings }: TopBarProps = {}) {
     }
   }, []);
 
+
+
+
   
+
 
   const handleClose = useCallback(() => {
     try {

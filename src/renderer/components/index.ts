@@ -12,3 +12,6 @@ export { CommandPalette, type Command } from './CommandPalette'
 export { SettingsModal } from './SettingsModal'
 export { InputDialog } from './InputDialog'
 export * from './Icons'
+
+
+
