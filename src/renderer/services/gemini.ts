@@ -1,7 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Gemini API Key
-const API_KEY = "AIzaSyDZHXrnvHTOTSC0G4leRKMAIAPbtK1vOPk";
+// Gemini API Key - Read from environment variables
+// Set VITE_GEMINI_API_KEY in your .env file
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+if (!API_KEY) {
+  console.warn(
+    "⚠️ VITE_GEMINI_API_KEY not found in environment variables.\n" +
+    "Please create a .env file in the project root with:\n" +
+    "VITE_GEMINI_API_KEY=your_api_key_here"
+  );
+}
 
 // Available Gemini models (updated to match actual available models)
 export const GEMINI_MODELS = [
@@ -16,7 +25,20 @@ export const GEMINI_MODELS = [
 export type GeminiModel = typeof GEMINI_MODELS[number]["id"];
 
 // Initialize Gemini AI
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+// Only initialize if API key is available
+let ai: GoogleGenAI | null = null;
+
+function getAIInstance(): GoogleGenAI {
+  if (!API_KEY) {
+    throw new Error(
+      "Gemini API key is not configured. Please set VITE_GEMINI_API_KEY in your .env file."
+    );
+  }
+  if (!ai) {
+    ai = new GoogleGenAI({ apiKey: API_KEY });
+  }
+  return ai;
+}
 
 export interface AvailableModel {
   id: string;
@@ -215,7 +237,7 @@ export async function sendMessageToGemini(
     }));
 
     // Use the new API format
-    const response = await ai.models.generateContent({
+    const response = await getAIInstance().models.generateContent({
       model,
       contents,
     });
@@ -272,19 +294,20 @@ export async function* streamMessageToGemini(
       let stream: any;
       
       // Try streamGenerateContent first
-      if (typeof (ai.models as any).streamGenerateContent === 'function') {
-        stream = await (ai.models as any).streamGenerateContent({
+      const aiInstance = getAIInstance();
+      if (typeof (aiInstance.models as any).streamGenerateContent === 'function') {
+        stream = await (aiInstance.models as any).streamGenerateContent({
           model: modelToTry,
           contents,
         });
-      } else if (typeof (ai.models as any).generateContentStream === 'function') {
-        stream = await (ai.models as any).generateContentStream({
+      } else if (typeof (aiInstance.models as any).generateContentStream === 'function') {
+        stream = await (aiInstance.models as any).generateContentStream({
           model: modelToTry,
           contents,
         });
       } else {
         // Fallback: use generateContent with stream option
-        stream = await (ai.models as any).generateContent({
+        stream = await (aiInstance.models as any).generateContent({
           model: modelToTry,
           contents,
           stream: true,
