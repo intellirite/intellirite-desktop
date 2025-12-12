@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 
 export type Theme = "dark" | "light" | "grey";
 
+
+
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;

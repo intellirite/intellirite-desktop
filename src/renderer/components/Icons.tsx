@@ -10,6 +10,8 @@ interface FileIconProps extends IconProps {
   extension?: string;
 }
 
+
+
 /**
  * 
  * Chevron Right Icon - Used for expand/collapse indicators

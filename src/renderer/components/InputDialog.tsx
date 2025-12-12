@@ -56,7 +56,7 @@ export function InputDialog({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 fade-in"
+        className="fixed inset-0 z-50 backdrop-blur-sm bg-black/50 fade-in"
         onClick={onClose}
       />
 
@@ -82,6 +82,8 @@ export function InputDialog({
           <input
             ref={inputRef}
             type="text"
+       
+            
             
             value={value}
             onChange={(e) => setValue(e.target.value)}
@@ -92,7 +94,7 @@ export function InputDialog({
           />
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-2 mt-4">
+          <div className="flex gap-2 justify-end items-center mt-4">
             <button
               type="button"
               onClick={onClose}
