@@ -5,6 +5,8 @@ export interface CursorPosition {
   column: number;
 }
 
+
+
 export interface StatusBarProps {
   cursorPosition?: CursorPosition;
   fileType?: string;
@@ -91,7 +93,7 @@ export function StatusBar({
   return (
     <div className="h-6 bg-[var(--bg-secondary)] border-t border-[var(--border-primary)] flex items-center justify-between px-3 text-[11px] text-[var(--text-secondary)] shrink-0">
       {/* Left: Cursor Position */}
-      <div className="flex items-center gap-4">
+      <div className="flex gap-4 items-center">
         <span className="font-mono">
           Ln {cursorPosition.line}, Col {cursorPosition.column}
         </span>
@@ -107,7 +109,7 @@ export function StatusBar({
       </div>
 
       {/* Right: Saved Time, Editor Mode, AI Status */}
-      <div className="flex items-center gap-3">
+      <div className="flex gap-3 items-center">
         {/* Last Saved Time */}
         {formattedSavedTime && (
           <span className="text-[var(--text-tertiary)]">

@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { FileIcon } from "./Icons";
 
+
+
+
 export interface TabData {
   id: string;
   filePath: string;
@@ -106,7 +109,7 @@ export function Tab({
         onContextMenu={handleContextMenu}
       >
         {/* File Icon */}
-        <div className="w-4 h-4 flex-shrink-0">
+        <div className="flex-shrink-0 w-4 h-4">
           <FileIcon extension={getFileExtension()} className="w-4 h-4" />
         </div>
 

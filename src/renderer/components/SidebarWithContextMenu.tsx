@@ -3,6 +3,8 @@ import { ChevronRightIcon, FolderIcon, FileIcon, PlusIcon, EditIcon, TrashIcon }
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import type { FileItem } from "../../shared/types";
 
+
+
 interface SidebarProps {
   currentFolder?: string;
   files?: FileItem[];
@@ -136,8 +138,7 @@ export function Sidebar({
           className={`
             group flex items-center gap-1 px-2 py-1 cursor-pointer select-none
             hover:bg-[var(--bg-hover)] transition-colors duration-100 relative
-            ${isSelected ? "bg-[var(--bg-active)]" : ""}
-          `}
+            ${isSelected ? "bg-[var(--bg-active)]" : ""}`}
           style={{ paddingLeft: `${8 + depth * 16}px` }}
           onClick={() => {
             if (item.type === "folder") {
@@ -150,11 +151,10 @@ export function Sidebar({
         >
           {/* Expand/Collapse Icon for Folders */}
           {item.type === "folder" && (
-            <div className="w-4 h-4 flex items-center justify-center">
+            <div className="flex justify-center items-center w-4 h-4">
               <ChevronRightIcon
                 className={`transition-transform duration-150 ${
-                  isExpanded ? "rotate-90" : ""
-                }`}
+                  isExpanded ? "rotate-90" : ""}`}
               />
             </div>
           )}
@@ -177,7 +177,7 @@ export function Sidebar({
 
           {/* Hover Actions - New File/New Folder buttons */}
           {item.type === "folder" && (
-            <div className="flex items-center gap-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-1 items-center ml-auto opacity-0 transition-opacity group-hover:opacity-100">
               <button
                 className="w-5 h-5 flex items-center justify-center hover:bg-[var(--bg-active)] rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
                 onClick={(e) => {
@@ -233,7 +233,7 @@ export function Sidebar({
       <div className="w-64 bg-[var(--bg-secondary)] border-r border-[var(--border-primary)] flex flex-col h-full">
         {/* Header */}
         <div className="h-10 flex items-center justify-between px-3 border-b border-[var(--border-primary)]">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex flex-1 gap-2 items-center min-w-0">
             {currentFolder ? (
               <>
                 <FolderIcon className="w-4 h-4 text-[var(--text-secondary)] shrink-0" />
@@ -257,9 +257,9 @@ export function Sidebar({
         </div>
 
         {/* File Tree or Empty State */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="overflow-y-auto flex-1">
           {!currentFolder ? (
-            <div className="flex flex-col items-center justify-center h-full px-4 text-center">
+            <div className="flex flex-col justify-center items-center px-4 h-full text-center">
               <FolderIcon className="w-12 h-12 text-[var(--text-tertiary)] mb-4" />
               <p className="text-sm text-[var(--text-secondary)] mb-2">
                 Open a folder to begin writing
@@ -272,7 +272,7 @@ export function Sidebar({
               </button>
             </div>
           ) : files.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full px-4 text-center">
+            <div className="flex flex-col justify-center items-center px-4 h-full text-center">
               <p className="text-sm text-[var(--text-tertiary)]">
                 No files in this folder
               </p>

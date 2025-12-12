@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
+
+
+
 export interface Command {
   id: string;
   label: string;
@@ -148,7 +151,7 @@ export function CommandPalette({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 fade-in"
+        className="fixed inset-0 z-50 backdrop-blur-sm bg-black/50 fade-in"
         onClick={onClose}
       />
 
@@ -231,7 +234,7 @@ export function CommandPalette({
                     
                     {/* Command Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex gap-2 items-center">
                         <span className={`font-medium ${isSelected ? "text-white" : ""}`}>
                           {command.label}
                         </span>
@@ -279,7 +282,7 @@ export function CommandPalette({
 
         {/* Footer hint */}
         <div className="px-4 py-2 border-t border-[var(--border-primary)] flex items-center justify-between text-xs text-[var(--text-tertiary)]">
-          <div className="flex items-center gap-4">
+          <div className="flex gap-4 items-center">
             <span>↑↓ Navigate</span>
             <span>↵ Select</span>
             <span>Esc Close</span>
